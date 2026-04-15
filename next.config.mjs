@@ -1,38 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* MD Jamil Contractor App Configuration */
-  
-  // Isse deployment ke waqt faltu errors nahi aayenge
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  // 1. APK banane ke liye static export zaroori hai
+  output: 'export', 
 
-  // Firebase aur Google Images allow karne ke liye
+  // 2. Images ko optimize hone se rokta hai (Capacitor/APK mein optimization kaam nahi karta)
   images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'firebasestorage.googleapis.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'lh3.googleusercontent.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'www.gstatic.com',
-      },
-    ],
+    unoptimized: true,
   },
 
-  // Vercel performance ke liye
-  swcMinify: true,
-  
-  // Standalone output Vercel ke liye best hai
-  output: 'standalone',
+  // 3. Agar aap trailing slashes chahte hain toh ise true rakhein (Optional)
+  trailingSlash: true,
 };
 
 export default nextConfig;
