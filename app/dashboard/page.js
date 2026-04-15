@@ -1,74 +1,69 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 
-export default function WorkerDashboard() {
+export default function Dashboard() {
   const [worker, setWorker] = useState(null);
-  const [pin, setPin] = useState(''); // 4-digit Identification Number
-  const [isVerified, setIsVerified] = useState(false);
+  const [image, setImage] = useState(null);
 
-  const verifyWorker = async () => {
-    if (pin.length !== 4) return alert("Khaali 4-digit ka number daalein!");
-    
-    // Admin dwara diya gaya 4-digit number hi document ID hogi
-    const docRef = doc(db, "workers", pin); 
-    const docSnap = await getDoc(docRef);
-    
-    if (docSnap.exists()) {
-      setWorker({ id: docSnap.id, ...docSnap.data() });
-      setIsVerified(true);
-    } else {
-      alert("Ghalat Number! Admin se sahi number maangein.");
-    }
-  };
+  useEffect(() => {
+    const id = localStorage.getItem("workerID");
+    if (!id) window.location.href = "/";
+    getDoc(doc(db, "workers", id)).then(s => setWorker(s.data()));
+  }, []);
 
-  const markAttendance = async (status) => {
-    const workerRef = doc(db, "workers", worker.id);
-    const log = {
-      status,
-      time: new Date().toLocaleTimeString(),
-      date: new Date().toLocaleDateString(),
+  const compressImage = (e) => {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.src = ev.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 300; canvas.height = 300;
+        canvas.getContext('2d').drawImage(img, 0, 0, 300, 300);
+        setImage(canvas.toDataURL('image/jpeg', 0.6));
+      };
     };
-    await updateDoc(workerRef, {
-      currentStatus: status,
-      attendanceHistory: arrayUnion(log)
-    });
-    alert(`${status} update ho gaya!`);
   };
 
-  if (!isVerified) return (
-    <div style={container}>
-      <div style={glassCard}>
-        <h2>MD Jamil Ansari</h2>
-        <p>Apna 4-digit number bhariye</p>
-        <input 
-          type="number" 
-          placeholder="0 0 0 0" 
-          onChange={(e) => setPin(e.target.value)} 
-          style={pinInput} 
-        />
-        <button onClick={verifyWorker} style={btn}>Verify & Start</button>
-      </div>
-    </div>
-  );
+  const syncAttendance = async (status) => {
+    if (!image) return alert("Pehle site ki photo lein!");
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      await updateDoc(doc(db, "workers", localStorage.getItem("workerID")), {
+        currentStatus: status,
+        attendance: arrayUnion({
+          status, image, 
+          time: new Date().toISOString(),
+          lat: pos.coords.latitude, lng: pos.coords.longitude,
+          approved: false
+        })
+      });
+      alert(status + " synced!");
+    });
+  };
+
+  if (!worker) return <p>Loading...</p>;
 
   return (
-    <div style={container}>
-      <div style={glassCard}>
-        <h3>Worker: {worker.name}</h3>
-        <div style={{display:'grid', gap:'15px'}}>
-          <button onClick={() => markAttendance("Working")} style={{...btn, background:'#22c55e'}}>Kaam Shuru (9-5)</button>
-          <button onClick={() => markAttendance("Relaxing")} style={{...btn, background:'#eab308'}}>Aaram (Break)</button>
-          <button onClick={() => markAttendance("Out")} style={{...btn, background:'#ef4444'}}>Site se Bahar</button>
-        </div>
+    <div style={styles.container}>
+      <div style={styles.glassCard}>
+        <h3>Welcome, {worker.name}</h3>
+        <input type="file" accept="image/*" capture="camera" onChange={compressImage} />
+        {image && <img src={image} width="100" style={{marginTop:'10px'}} />}
+        <button onClick={() => syncAttendance("Working")} style={{...styles.btn, background:'#22c55e'}}>Kaam Shuru (9-5)</button>
+        <button onClick={() => syncAttendance("Relaxing")} style={{...styles.btn, background:'#eab308'}}>Aaram (Break)</button>
+        <button onClick={() => syncAttendance("Out")} style={{...styles.btn, background:'#ef4444'}}>Site Se Bahar</button>
+        <button onClick={() => {localStorage.clear(); window.location.href="/"}} style={{marginTop:'20px'}}>Logout</button>
       </div>
     </div>
   );
 }
 
-// Styling (Mobile Friendly)
-const container = { background: 'linear-gradient(135deg, #667eea, #764ba2)', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' };
-const glassCard = { background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', padding: '30px', borderRadius: '20px', color: 'white', textAlign:'center', width:'100%', maxWidth:'400px' };
-const pinInput = { width: '80%', padding: '15px', fontSize: '24px', textAlign: 'center', letterSpacing: '10px', borderRadius: '10px', border: 'none', marginBottom: '20px' };
-const btn = { width: '100%', padding: '15px', borderRadius: '10px', border: 'none', fontWeight: 'bold', fontSize: '18px', cursor: 'pointer' };
+const styles = {
+  container: { background: 'linear-gradient(135deg, #667eea, #764ba2)', minHeight: '100vh', padding: '20px' },
+  glassCard: { background: 'rgba(255,255,255,0.2)', padding: '20px', borderRadius: '20px', color: 'white', textAlign: 'center' },
+  btn: { width: '100%', padding: '15px', margin: '10px 0', borderRadius: '12px', border: 'none', color: 'white', fontWeight: 'bold' }
+};
