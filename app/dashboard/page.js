@@ -7,6 +7,7 @@ export default function Dashboard() {
   const [worker, setWorker] = useState(null);
   const [image, setImage] = useState(null);
   const [currentStatus, setCurrentStatus] = useState("Offline");
+  const [lastActionTime, setLastActionTime] = useState(null);
 
   useEffect(() => {
     const id = localStorage.getItem("workerID");
@@ -15,8 +16,11 @@ export default function Dashboard() {
     const fetchWorker = async () => {
       const docSnap = await getDoc(doc(db, "workers", id));
       if (docSnap.exists()) {
-        setWorker(docSnap.data());
-        setCurrentStatus(docSnap.data().currentStatus || "Offline");
+        const data = docSnap.data();
+        setWorker(data);
+        setCurrentStatus(data.currentStatus || "Offline");
+        // Firebase se last update ka time nikalna
+        setLastActionTime(data.lastUpdated?.toDate() || new Date());
       }
     };
     fetchWorker();
@@ -38,32 +42,63 @@ export default function Dashboard() {
     };
   };
 
-  const updateStatus = async (statusName) => {
+  const updateStatus = async (newStatus) => {
     if (!image) return alert("Pehle Photo lein!");
     
+    // Exact location track karne ke liye Geolocation API
     navigator.geolocation.getCurrentPosition(async (pos) => {
       const id = localStorage.getItem("workerID");
-      const timeNow = new Date().toLocaleTimeString();
+      const now = new Date();
       
+      // Time Calculation: Kitni der pichle kaam mein tha
+      let durationMinutes = 0;
+      if (lastActionTime) {
+        durationMinutes = Math.round((now - lastActionTime) / 60000); 
+      }
+
+      // Naya record jo Admin ko exact location dikhayega
       const logData = {
-        status: statusName,
-        time: timeNow,
-        date: new Date().toLocaleDateString(),
+        fromStatus: currentStatus,
+        toStatus: newStatus,
+        duration: `${durationMinutes} mins`, 
+        time: now.toLocaleTimeString(),
+        date: now.toLocaleDateString(),
         photo: image,
-        location: { lat: pos.coords.latitude, lng: pos.coords.longitude }
+        location: { 
+          lat: pos.coords.latitude, 
+          lng: pos.coords.longitude,
+          mapLink: `https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`
+        }
       };
 
-      // Firebase mein "Live Status" update karna
-      await updateDoc(doc(db, "workers", id), {
-        currentStatus: statusName, // Yeh automatic admin ko dikhayega
+      // Firebase mein data save karna
+      const workerRef = doc(db, "workers", id);
+      
+      let updates = {
+        currentStatus: newStatus,
         lastUpdated: serverTimestamp(),
         attendanceHistory: arrayUnion(logData)
-      });
+      };
 
-      setCurrentStatus(statusName);
+      // Automatic Time Tracking Logic
+      if (currentStatus === "Working") {
+        updates.totalWorkMinutes = (worker.totalWorkMinutes || 0) + durationMinutes;
+      } else if (currentStatus === "Relaxing") {
+        updates.totalRelaxMinutes = (worker.totalRelaxMinutes || 0) + durationMinutes;
+      } else if (currentStatus === "Out") {
+        // Isse pata chalega ki kitni der "Out" yaani bahar raha
+        updates.totalOutMinutes = (worker.totalOutMinutes || 0) + durationMinutes;
+      }
+
+      await updateDoc(workerRef, updates);
+
+      setCurrentStatus(newStatus);
+      setLastActionTime(now);
       setImage(null);
-      alert(`Status badal kar ${statusName} ho gaya hai!`);
-    });
+      alert(`Status: ${newStatus}. Pichli activity ${durationMinutes} mins ki thi.`);
+    }, (error) => {
+      alert("Location ON kijiye, varna attendance nahi lagegi!");
+    }, { enableHighAccuracy: true });
   };
 
   return (
@@ -72,20 +107,22 @@ export default function Dashboard() {
         <h2 style={styles.title}>MD Jamil Ansari</h2>
         <p>Worker: <strong>{worker?.name}</strong></p>
         
-        {/* Live Status Indicator */}
-        <div style={{...styles.statusBadge, background: currentStatus === "Working" ? "#22c55e" : "#ef4444"}}>
-          Abhi Ka Status: {currentStatus}
+        <div style={{
+          ...styles.statusBadge, 
+          background: currentStatus === "Working" ? "#22c55e" : currentStatus === "Relaxing" ? "#eab308" : "#ef4444"
+        }}>
+          Live Status: {currentStatus}
         </div>
 
         <div style={styles.cameraBox}>
-          {image ? <img src={image} style={styles.preview} /> : <div style={styles.placeholder}>📸 Photo Zaruri Hai</div>}
+          {image ? <img src={image} style={styles.preview} /> : <div style={styles.placeholder}>📸 Photo Capture</div>}
           <input type="file" accept="image/*" capture="camera" onChange={handleCapture} style={{marginTop:'10px'}} />
         </div>
 
         <div style={styles.btnGroup}>
-          <button style={{...styles.btn, background:'#22c55e'}} onClick={() => updateStatus("Working")}>▶️ Kaam Shuru</button>
-          <button style={{...styles.btn, background:'#eab308'}} onClick={() => updateStatus("Relaxing")}>☕ Aaram (Break)</button>
-          <button style={{...styles.btn, background:'#ef4444'}} onClick={() => updateStatus("Out")}>🚪 Bahar Gaya (Exit)</button>
+          <button style={{...styles.btn, background:'#22c55e'}} onClick={() => updateStatus("Working")}>▶️ Start Working</button>
+          <button style={{...styles.btn, background:'#eab308'}} onClick={() => updateStatus("Relaxing")}>☕ Take Break</button>
+          <button style={{...styles.btn, background:'#ef4444'}} onClick={() => updateStatus("Out")}>🚪 Leave Site (Bahar)</button>
         </div>
       </div>
     </div>
@@ -93,12 +130,12 @@ export default function Dashboard() {
 }
 
 const styles = {
-  container: { background: 'linear-gradient(135deg, #667eea, #764ba2)', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' },
-  glassCard: { background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', padding: '25px', borderRadius: '25px', color: 'white', textAlign: 'center', width: '100%', maxWidth: '400px' },
-  statusBadge: { padding: '10px', borderRadius: '10px', marginBottom: '20px', fontWeight: 'bold', fontSize: '14px' },
-  cameraBox: { background: 'rgba(255,255,255,0.1)', padding: '15px', borderRadius: '15px', marginBottom: '20px' },
-  preview: { width: '100%', borderRadius: '10px' },
-  placeholder: { height: '80px', display:'flex', alignItems:'center', justifyContent:'center', border:'1px dashed #fff' },
-  btnGroup: { display: 'flex', flexDirection: 'column', gap: '10px' },
-  btn: { padding: '15px', border: 'none', borderRadius: '12px', color: 'white', fontWeight: 'bold', cursor: 'pointer' }
+    container: { background: 'linear-gradient(135deg, #667eea, #764ba2)', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' },
+    glassCard: { background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', padding: '25px', borderRadius: '25px', color: 'white', textAlign: 'center', width: '100%', maxWidth: '400px' },
+    statusBadge: { padding: '10px', borderRadius: '10px', marginBottom: '20px', fontWeight: 'bold' },
+    cameraBox: { background: 'rgba(255,255,255,0.1)', padding: '15px', borderRadius: '15px', marginBottom: '20px' },
+    preview: { width: '100%', borderRadius: '10px' },
+    placeholder: { height: '80px', display:'flex', alignItems:'center', justifyContent:'center', border:'1px dashed #fff' },
+    btnGroup: { display: 'flex', flexDirection: 'column', gap: '10px' },
+    btn: { padding: '15px', border: 'none', borderRadius: '12px', color: 'white', fontWeight: 'bold', cursor: 'pointer' }
 };
