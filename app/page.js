@@ -2,10 +2,11 @@
 import { auth, provider } from '@/lib/firebase';
 import { signInWithPopup, onAuthStateChanged } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function LoginPage() {
   const router = useRouter();
+  const [status, setStatus] = useState({ msg: '', type: '' }); // { msg: 'Login Success', type: 'success' }
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -16,15 +17,26 @@ export default function LoginPage() {
     return () => unsubscribe();
   }, [router]);
 
+  // Message ko 3 second baad hatane ke liye
+  useEffect(() => {
+    if (status.msg) {
+      const timer = setTimeout(() => setStatus({ msg: '', type: '' }), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [status]);
+
   const handleLogin = async () => {
     try {
+      setStatus({ msg: 'Connecting to Google...', type: 'info' });
       const result = await signInWithPopup(auth, provider);
+      
       if (result.user) {
-        router.push('/dashboard');
+        setStatus({ msg: 'Login Successful! Redirecting...', type: 'success' });
+        setTimeout(() => router.push('/dashboard'), 1000);
       }
     } catch (error) {
       console.error("Login Error:", error);
-      alert("Login failed: " + error.message);
+      setStatus({ msg: 'Login Failed! Please try again.', type: 'error' });
     }
   };
 
@@ -35,14 +47,34 @@ export default function LoginPage() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-      padding: '20px'
+      fontFamily: "'Segoe UI', Roboto, sans-serif",
+      padding: '20px',
+      position: 'relative'
     }}>
+      
+      {/* Notification Toast */}
+      {status.msg && (
+        <div style={{
+          position: 'absolute',
+          top: '20px',
+          padding: '12px 24px',
+          borderRadius: '12px',
+          backgroundColor: status.type === 'success' ? '#22c55e' : status.type === 'error' ? '#ef4444' : '#3b82f6',
+          color: 'white',
+          fontWeight: '600',
+          boxShadow: '0 10px 15px rgba(0,0,0,0.2)',
+          zIndex: 100,
+          animation: 'slideDown 0.5s ease-out'
+        }}>
+          {status.msg}
+        </div>
+      )}
+
       {/* Glass Card */}
       <div style={{
         background: 'rgba(255, 255, 255, 0.15)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
+        backdropFilter: 'blur(15px)',
+        WebkitBackdropFilter: 'blur(15px)',
         borderRadius: '32px',
         border: '1px solid rgba(255, 255, 255, 0.3)',
         boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
@@ -53,7 +85,6 @@ export default function LoginPage() {
         color: '#fff'
       }}>
         
-        {/* Logo Section */}
         <div style={{ marginBottom: '40px' }}>
           <div style={{
             background: 'rgba(255, 255, 255, 0.2)',
@@ -68,25 +99,16 @@ export default function LoginPage() {
           }}>
             <span style={{ fontSize: '30px', fontWeight: 'bold' }}>MJ</span>
           </div>
-          <h1 style={{ fontSize: '26px', fontWeight: '700', letterSpacing: '1px', margin: '0' }}>
-            MD JAMIL ANSARI
-          </h1>
-          <p style={{ fontSize: '14px', opacity: '0.8', marginTop: '8px' }}>
-            Workforce Management System
-          </p>
+          <h1 style={{ fontSize: '26px', fontWeight: '700', letterSpacing: '1px' }}>MD JAMIL ANSARI</h1>
+          <p style={{ fontSize: '14px', opacity: '0.8', marginTop: '8px' }}>Workforce Management System</p>
         </div>
 
-        {/* Login Area */}
         <div style={{ 
           background: 'rgba(255, 255, 255, 0.1)', 
           padding: '25px', 
           borderRadius: '24px',
           border: '1px solid rgba(255, 255, 255, 0.1)'
         }}>
-          <h2 style={{ fontSize: '18px', fontWeight: '500', marginBottom: '25px' }}>
-            Secure Portal Login
-          </h2>
-          
           <button 
             onClick={handleLogin}
             style={{
@@ -100,29 +122,23 @@ export default function LoginPage() {
               padding: '14px',
               borderRadius: '16px',
               cursor: 'pointer',
-              transition: 'transform 0.2s, box-shadow 0.2s',
               fontSize: '16px',
               fontWeight: '600',
               color: '#444'
             }}
-            onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-            onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
           >
-            <img 
-              src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" 
-              alt="Google" 
-              style={{ width: '22px' }} 
-            />
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" alt="G" style={{ width: '22px' }} />
             Login with Google
           </button>
         </div>
-
-        {/* Footer */}
-        <p style={{ fontSize: '12px', marginTop: '30px', opacity: '0.6' }}>
-          © 2026 Jamil Contractor App <br/>
-          Developed by Sadiya
-        </p>
       </div>
+
+      <style jsx>{`
+        @keyframes slideDown {
+          from { transform: translateY(-50px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }
