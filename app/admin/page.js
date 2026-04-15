@@ -1,44 +1,73 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { checkDistance } from '@/lib/geofence';
+import { collection, getDocs, doc, updateDoc, setDoc } from 'firebase/firestore';
 
 export default function AdminPanel() {
   const [workers, setWorkers] = useState([]);
-  const siteLocation = { lat: 22.8046, lng: 86.2029 }; // Example site lat/lng
+  const [siteLocation, setSiteLocation] = useState({ lat: null, lng: null });
 
-  useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "live_tracking"), (snap) => {
-      const list = snap.docs.map(doc => {
-        const data = doc.data();
-        const dist = checkDistance(data.lat, data.lng, siteLocation.lat, siteLocation.lng);
-        return { 
-          id: doc.id, 
-          ...data, 
-          isInside: dist < 100 // 100 meter radius
-        };
-      });
-      setWorkers(list);
+  const loadData = async () => {
+    const snap = await getDocs(collection(db, "workers"));
+    setWorkers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+  };
+
+  useEffect(() => { loadData(); }, []);
+
+  // Admin Worker register karega tab ID milegi
+  const registerWorker = async (name) => {
+    const id = "JAMIL-" + Math.floor(1000 + Math.random() * 9000);
+    await setDoc(doc(db, "workers", id), {
+      name, dailyWages: 500, advance: 0, attendanceHistory: [], currentStatus: 'Offline'
     });
-    return () => unsubscribe();
-  }, []);
+    alert("Naya Worker ID: " + id);
+    loadData();
+  };
+
+  const approveAttendance = async (workerId, logIndex) => {
+    const workerRef = doc(db, "workers", workerId);
+    const workerData = workers.find(w => w.id === workerId);
+    workerData.attendanceHistory[logIndex].approved = true;
+    
+    await updateDoc(workerRef, {
+      attendanceHistory: workerData.attendanceHistory
+    });
+    loadData();
+    alert("Attendance Approved!");
+  };
 
   return (
-    <div className="p-4 bg-gray-50 min-h-screen">
-      <h1 className="text-2xl font-bold mb-4 text-blue-800">MD Jamil Ansari - Admin</h1>
+    <div style={{padding:'20px', fontFamily:'sans-serif'}}>
+      <h1 style={{textAlign:'center'}}>MD Jamil Ansari Admin</h1>
+      
+      <button onClick={() => registerWorker(prompt("Worker ka naam?"))} style={adminBtn}>+ Add New Worker</button>
+
+      <h3>Real-time Worker Tracking</h3>
       {workers.map(w => (
-        <div key={w.id} className="bg-white p-4 rounded-lg shadow mb-2 border-l-4 border-blue-500">
-          <div className="flex justify-between">
-            <h2 className="font-bold text-lg">{w.name}</h2>
-            <span className={w.isInside ? "text-green-600 font-bold" : "text-red-600 font-bold"}>
-              {w.isInside ? "On Site" : "Outside Site"}
-            </span>
-          </div>
-          <p className="text-sm">Status: <span className="font-semibold text-orange-600">{w.currentStatus}</span></p>
-          <p className="text-sm">Payment Due: ₹{w.totalPending} | Advance: ₹{w.advance}</p>
+        <div key={w.id} style={workerCard}>
+          <h4>{w.name} (ID: {w.id})</h4>
+          <p>Status: <strong>{w.currentStatus}</strong></p>
+          <p>Advance: ₹<input type="number" defaultValue={w.advance} onBlur={async (e) => {
+            await updateDoc(doc(db, "workers", w.id), { advance: Number(e.target.value) });
+            loadData();
+          }} style={{width:'60px'}} /></p>
+          
+          <p>Total Payment: ₹{(w.attendanceHistory.filter(h => h.approved).length * w.dailyWages) - w.advance}</p>
+          
+          <h5>Pending Approvals:</h5>
+          {w.attendanceHistory.map((log, index) => !log.approved && (
+            <div key={index} style={{background:'#fff3cd', padding:'10px', marginBottom:'5px', borderRadius:'5px'}}>
+              <img src={log.photo} width="50" /> {log.time} - {log.status}
+              <button onClick={() => approveAttendance(w.id, index)} style={{marginLeft:'10px'}}>Approve</button>
+            </div>
+          ))}
+          <button style={pdfBtn}>Download History PDF</button>
         </div>
       ))}
     </div>
   );
 }
+
+const adminBtn = { padding:'15px', background:'#000', color:'#fff', border:'none', borderRadius:'10px', width:'100%', cursor:'pointer' };
+const workerCard = { border:'1px solid #ddd', padding:'15px', borderRadius:'15px', marginBottom:'15px', background:'#f9f9f9' };
+const pdfBtn = { background:'#dc3545', color:'#fff', border:'none', padding:'5px 10px', borderRadius:'5px', marginTop:'10px' };
