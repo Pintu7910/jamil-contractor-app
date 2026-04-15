@@ -1,74 +1,90 @@
 "use client";
 import { auth, provider } from '@/lib/firebase';
-import { signInWithPopup } from 'firebase/auth';
+import { signInWithPopup, onAuthStateChanged } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function LoginPage() {
   const router = useRouter();
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        router.push('/dashboard');
+      }
+    });
+    return () => unsubscribe();
+  }, [router]);
+
   const handleLogin = async () => {
     try {
       const result = await signInWithPopup(auth, provider);
-      router.push('/dashboard');
+      if (result.user) {
+        router.push('/dashboard');
+      }
     } catch (error) {
       console.error("Login Error:", error);
-      alert("Login failed. Please try again.");
+      alert("Login failed: " + error.message);
     }
   };
 
   return (
     <div style={{
-      backgroundColor: '#f8fafc',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       minHeight: '100vh',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontFamily: 'sans-serif',
+      fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
       padding: '20px'
     }}>
+      {/* Glass Card */}
       <div style={{
-        backgroundColor: '#ffffff',
+        background: 'rgba(255, 255, 255, 0.15)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        borderRadius: '32px',
+        border: '1px solid rgba(255, 255, 255, 0.3)',
+        boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
         width: '100%',
         maxWidth: '400px',
-        padding: '40px 30px',
-        borderRadius: '24px',
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+        padding: '50px 30px',
         textAlign: 'center',
-        border: '1px solid #e2e8f0'
+        color: '#fff'
       }}>
         
-        {/* Branding Area */}
-        <div style={{ marginBottom: '30px' }}>
+        {/* Logo Section */}
+        <div style={{ marginBottom: '40px' }}>
           <div style={{
-            background: '#1e293b',
-            color: 'white',
-            width: '60px',
-            height: '60px',
-            borderRadius: '16px',
+            background: 'rgba(255, 255, 255, 0.2)',
+            width: '70px',
+            height: '70px',
+            borderRadius: '50%',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '24px',
-            fontWeight: 'bold',
-            margin: '0 auto 15px'
-          }}>M</div>
-          <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a', margin: '0 0 5px 0' }}>
-            MD JAMIL <span style={{ color: '#2563eb' }}>ANSARI</span>
+            margin: '0 auto 20px',
+            border: '1px solid rgba(255, 255, 255, 0.4)'
+          }}>
+            <span style={{ fontSize: '30px', fontWeight: 'bold' }}>MJ</span>
+          </div>
+          <h1 style={{ fontSize: '26px', fontWeight: '700', letterSpacing: '1px', margin: '0' }}>
+            MD JAMIL ANSARI
           </h1>
-          <p style={{ fontSize: '14px', color: '#64748b', fontWeight: '500', margin: '0' }}>
+          <p style={{ fontSize: '14px', opacity: '0.8', marginTop: '8px' }}>
             Workforce Management System
           </p>
         </div>
 
-        {/* Action Area */}
+        {/* Login Area */}
         <div style={{ 
-          backgroundColor: '#f1f5f9', 
+          background: 'rgba(255, 255, 255, 0.1)', 
           padding: '25px', 
-          borderRadius: '18px',
-          marginBottom: '20px' 
+          borderRadius: '24px',
+          border: '1px solid rgba(255, 255, 255, 0.1)'
         }}>
-          <h2 style={{ fontSize: '18px', color: '#334155', marginBottom: '20px', fontWeight: '600' }}>
-            Secure Access Portal
+          <h2 style={{ fontSize: '18px', fontWeight: '500', marginBottom: '25px' }}>
+            Secure Portal Login
           </h2>
           
           <button 
@@ -79,28 +95,32 @@ export default function LoginPage() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '12px',
-              backgroundColor: '#ffffff',
-              border: '1px solid #cbd5e1',
-              padding: '12px',
-              borderRadius: '12px',
+              backgroundColor: '#fff',
+              border: 'none',
+              padding: '14px',
+              borderRadius: '16px',
               cursor: 'pointer',
-              transition: 'all 0.2s',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+              transition: 'transform 0.2s, box-shadow 0.2s',
+              fontSize: '16px',
+              fontWeight: '600',
+              color: '#444'
             }}
+            onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+            onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
           >
             <img 
               src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" 
               alt="Google" 
-              style={{ width: '20px', height: '20px' }} 
+              style={{ width: '22px' }} 
             />
-            <span style={{ fontWeight: '600', color: '#334155' }}>Login with Google</span>
+            Login with Google
           </button>
         </div>
 
         {/* Footer */}
-        <p style={{ fontSize: '11px', color: '#94a3b8', lineHeight: '1.5' }}>
-          Authorized access only. By logging in, you agree to our site terms.<br />
-          <strong>© 2026 Jamil Contractor App</strong>
+        <p style={{ fontSize: '12px', marginTop: '30px', opacity: '0.6' }}>
+          © 2026 Jamil Contractor App <br/>
+          Developed by Sadiya
         </p>
       </div>
     </div>
