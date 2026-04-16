@@ -1,62 +1,138 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { db } from '../lib/firebase'; // ✅ Rasta seedha rakhein
-import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase'; 
+import { doc, getDoc, onSnapshot, updateDoc, arrayUnion } from 'firebase/firestore';
 
-export default function LoginPage() {
+// ✅ Components (Sahi rasta)
+import IDCard from '../components/IDCard';
+import FinanceLedger from '../components/FinanceLedger';
+import AttendanceControl from '../components/AttendanceControl';
+import { downloadWorkerHistory } from '../utils/pdfGenerator';
+
+export default function CombinedPage() {
   const [pin, setPin] = useState('');
+  const [worker, setWorker] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const router = useRouter();
 
+  // 1. Check if already logged in
   useEffect(() => {
-    // Agar pehle se login hai toh login page mat dikhao
-    if (localStorage.getItem("workerID")) {
-      setIsLoggedIn(true);
+    const savedID = localStorage.getItem("workerID");
+    if (savedID) {
+      loadWorkerData(savedID);
     }
   }, []);
 
+  // 2. Load Worker Data from Firestore
+  const loadWorkerData = (id) => {
+    setLoading(true);
+    const unsub = onSnapshot(doc(db, "workers", id), (snap) => {
+      if (snap.exists()) {
+        setWorker({ id: snap.id, ...snap.data() });
+        setIsLoggedIn(true);
+      } else {
+        alert("Worker record nahi mila!");
+        localStorage.removeItem("workerID");
+      }
+      setLoading(false);
+    });
+    return () => unsub();
+  };
+
+  // 3. Handle Login
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (pin.length !== 4) return alert("4-digit PIN daalein");
+    if (pin.length < 4) return alert("Sahi PIN daalein");
     setLoading(true);
 
     try {
       const docSnap = await getDoc(doc(db, "workers", pin));
-      if (docSnap.exists() || pin === "1234") {
+      if (docSnap.exists()) {
         localStorage.setItem("workerID", pin);
-        setIsLoggedIn(true); // ✅ Ab ye isi page par dashboard load karega
-      } else { 
-        alert("Ghalat PIN!"); 
+        loadWorkerData(pin);
+      } else {
+        alert("Ghalat PIN!");
       }
-    } catch (e) { 
-      alert("Network error!"); 
+    } catch (err) {
+      alert("Network Error!");
     }
     setLoading(false);
   };
 
-  // ✅ Agar login ho gaya toh Dashboard dikhao, warna Login Screen
-  if (isLoggedIn) {
-    return <WorkerDashboard workerId={localStorage.getItem("workerID")} />;
+  const handleMarkAttendance = async () => {
+    if (!worker) return;
+    const today = new Date().toLocaleDateString('en-GB');
+    try {
+      const workerRef = doc(db, "workers", worker.id);
+      await updateDoc(workerRef, {
+        approvedAttendance: arrayUnion({
+          date: today,
+          time: new Date().toLocaleTimeString(),
+          status: "Approved" 
+        }),
+        status: "Online"
+      });
+      alert("✅ Attendance Successful!");
+    } catch (error) {
+      alert("Error saving attendance.");
+    }
+  };
+
+  // --- LOGIN UI ---
+  if (!isLoggedIn) {
+    return (
+      <div style={styles.loginContainer}>
+        <div style={styles.glassCard}>
+          <div style={styles.logo}>MJ</div>
+          <h2>MD JAMIL ANSARI</h2>
+          <p>Workforce Management</p>
+          <input 
+            type="number" 
+            placeholder="Enter PIN" 
+            value={pin} 
+            onChange={e => setPin(e.target.value.slice(0,6))} 
+            style={styles.input} 
+          />
+          <button onClick={handleLogin} style={styles.btn}>
+            {loading ? "Checking..." : "VERIFY & ENTER"}
+          </button>
+        </div>
+      </div>
+    );
   }
 
+  // --- DASHBOARD UI ---
+  if (loading && !worker) return <div style={styles.loading}>Loading Dashboard...</div>;
+
   return (
-    <div style={styles.container}>
-      <div style={styles.glassCard}>
-        <div style={styles.logo}>MJ</div>
-        <h2>MD JAMIL ANSARI</h2>
-        <p>Workforce Management</p>
-        <input type="number" placeholder="0 0 0 0" value={pin} onChange={e => setPin(e.target.value.slice(0,4))} style={styles.input} />
-        <button onClick={handleLogin} style={styles.btn}>{loading ? "Checking..." : "VERIFY & ENTER"}</button>
+    <div style={styles.dashboardLayout}>
+      <header style={styles.glassHeader}>
+        <h2 style={{margin:0}}>MD JAMIL ANSARI</h2>
+        <button onClick={() => {localStorage.removeItem("workerID"); window.location.reload();}} style={styles.logoutBtn}>Logout</button>
+      </header>
+
+      <div style={styles.contentWrapper}><IDCard worker={worker} /></div>
+      <div style={styles.contentWrapper}>
+        <AttendanceControl onMarkAttendance={handleMarkAttendance} attendanceHistory={worker.approvedAttendance} />
+      </div>
+      <div style={styles.contentWrapper}><FinanceLedger worker={worker} /></div>
+      <div style={styles.contentWrapper}>
+        <button onClick={() => downloadWorkerHistory(worker)} style={styles.glassPdfBtn}>📥 Download PDF</button>
       </div>
     </div>
   );
 }
 
-// --- Dashboard Component (Isi file mein niche daal dein) ---
-function WorkerDashboard({ workerId }) {
-  // ... (Yahan pichla dashboard wala code daal dein)
-}
-
-const styles = { /* Purane styles yahan rahege */ };
+const styles = {
+  loginContainer: { background: 'linear-gradient(135deg, #667eea, #764ba2)', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' },
+  glassCard: { background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', padding: '40px', borderRadius: '25px', textAlign: 'center', color: 'white', width: '90%', maxWidth: '400px' },
+  input: { width: '100%', padding: '15px', fontSize: '20px', textAlign: 'center', borderRadius: '10px', border: 'none', marginBottom: '20px', color: '#333' },
+  btn: { width: '100%', padding: '15px', borderRadius: '10px', border: 'none', background: '#fff', color: '#667eea', fontWeight: 'bold', cursor: 'pointer' },
+  logo: { width: '70px', height: '70px', background: 'rgba(255,255,255,0.3)', borderRadius: '50%', margin: '0 auto 15px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' },
+  dashboardLayout: { padding: '20px 15px', background: 'linear-gradient(#8e44ad, #3498db)', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' },
+  glassHeader: { width: '100%', maxWidth: '400px', padding: '15px', background: 'rgba(255,255,255,0.1)', borderRadius: '15px', textAlign: 'center', color: '#fff' },
+  logoutBtn: { background: 'none', border: '1px solid #fff', color: '#fff', padding: '5px 10px', borderRadius: '5px', marginTop: '10px', cursor: 'pointer' },
+  contentWrapper: { width: '100%', maxWidth: '400px' },
+  glassPdfBtn: { width: '100%', padding: '18px', borderRadius: '20px', background: 'rgba(255,255,255,0.15)', color: '#fff', fontWeight: 'bold', border: 'none', cursor: 'pointer' },
+  loading: { height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#764ba2', color: '#fff' }
+};
