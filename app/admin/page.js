@@ -13,7 +13,7 @@ export default function AdminPanel() {
   const [dailyWageInput, setDailyWageInput] = useState('');
   const [newName, setNewName] = useState('');
   const [photoBase64, setPhotoBase64] = useState('');
-  const [showAttendance, setShowAttendance] = useState(false);
+  const [activeTab, setActiveTab] = useState('adv'); // adv, earn, cash
 
   useEffect(() => {
     if (isAuthorized) {
@@ -34,7 +34,6 @@ export default function AdminPanel() {
     else alert("❌ Galat PIN!");
   };
 
-  // --- Worker Registration with Photo ---
   const handlePhoto = (e) => {
     const file = e.target.files[0];
     const reader = new FileReader();
@@ -57,24 +56,16 @@ export default function AdminPanel() {
         totalAdvance: 0, totalPaidEarnings: 0, approvedAttendance: [],
         advanceHistory: [], paymentHistory: []
       });
-      alert(`✅ ID: ${newId} Registered!`);
+      alert(`✅ Worker Registered! ID: ${newId}`);
       setNewName(''); setPhotoBase64('');
     } catch (err) { alert("Error: " + err.message); }
-  };
-
-  // --- Attendance & Finance ---
-  const handleAttAction = async (idx, action) => {
-    let list = [...selectedWorker.approvedAttendance];
-    if (action === 'delete') list.splice(idx, 1);
-    else list[idx].status = action;
-    await updateDoc(doc(db, "workers", selectedWorker.id), { approvedAttendance: list });
   };
 
   const updateWage = async () => {
     if (!dailyWageInput || !selectedWorker) return;
     await updateDoc(doc(db, "workers", selectedWorker.id), { dailyWage: Number(dailyWageInput) });
     setDailyWageInput('');
-    alert("Dihadi Set!");
+    alert("💰 Dihadi Update Ho Gayi!");
   };
 
   const processFinance = async (type) => {
@@ -90,15 +81,24 @@ export default function AdminPanel() {
     setAmount('');
   };
 
-  // Calculations
-  const approvedDays = selectedWorker?.approvedAttendance?.filter(a => a.status === 'Approved').length || 0;
-  const totalEarned = approvedDays * (selectedWorker?.dailyWage || 0);
+  const handleAttAction = async (idx, action) => {
+    let list = [...selectedWorker.approvedAttendance];
+    if (action === 'delete') {
+      if(confirm("Haziri delete karein?")) list.splice(idx, 1);
+    } else {
+      list[idx].status = action;
+    }
+    await updateDoc(doc(db, "workers", selectedWorker.id), { approvedAttendance: list });
+  };
+
+  const approvedAttendance = selectedWorker?.approvedAttendance?.filter(a => a.status === 'Approved') || [];
+  const totalEarned = approvedAttendance.length * (selectedWorker?.dailyWage || 0);
   const bakiPayment = totalEarned - (selectedWorker?.totalPaidEarnings || 0);
 
   if (!isAuthorized) return (
     <div style={styles.loginOverlay}>
       <div style={styles.loginBox}>
-        <h2>🔐 Admin Access</h2>
+        <h2>🔐 JAMIL ADMIN</h2>
         <input type="password" value={pin} onChange={(e)=>setPin(e.target.value)} style={styles.input} placeholder="PIN"/>
         <button onClick={handlePinSubmit} style={styles.blueBtn}>Unlock</button>
       </div>
@@ -107,64 +107,56 @@ export default function AdminPanel() {
 
   return (
     <div style={styles.container}>
-      <h2 style={{textAlign:'center', color:'#764ba2'}}>MD JAMIL CONTROL PANEL</h2>
+      <h2 style={{textAlign:'center', color:'#4a148c'}}>MD JAMIL CONTROL PANEL</h2>
 
       {/* Register Section */}
       <div style={styles.card}>
         <h4>🆕 Register Worker</h4>
         <input type="text" placeholder="Name" value={newName} onChange={(e)=>setNewName(e.target.value)} style={styles.input}/>
-        <input type="file" onChange={handlePhoto} style={{fontSize:'12px', margin:'10px 0'}}/>
-        <button onClick={handleRegister} style={styles.blueBtn}>Add Worker</button>
+        <input type="file" onChange={handlePhoto} style={{margin:'10px 0', fontSize:'12px'}}/>
+        <button onClick={handleRegister} style={styles.blueBtn}>Add New Worker</button>
       </div>
 
-      {/* Select Section */}
+      {/* Worker List Horizontal View */}
       <div style={styles.card}>
-        <h4>👤 Select Worker</h4>
-        <select onChange={(e) => setSelectedWorker(workersList.find(w => w.id === e.target.value))} style={styles.input}>
-          <option value="">Choose Worker...</option>
-          {workersList.map(w => <option key={w.id} value={w.id}>{w.name} ({w.id})</option>)}
-        </select>
+        <h4>👥 Select Worker</h4>
+        <div style={styles.workerGrid}>
+          {workersList.map(w => (
+            <div key={w.id} onClick={() => setSelectedWorker(w)} 
+                 style={{...styles.workerItem, background: selectedWorker?.id === w.id ? '#f3e5f5' : 'transparent', border: selectedWorker?.id === w.id ? '2px solid #764ba2' : '1px solid #eee'}}>
+              <img src={w.photo || "https://via.placeholder.com/45"} style={styles.avatar}/>
+              <span style={{fontSize:'10px', fontWeight:'bold', marginTop:'4px'}}>{w.name}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {selectedWorker && (
         <>
+          {/* Main Management Card */}
           <div style={styles.card}>
-            <div style={{display:'flex', alignItems:'center', gap:'10px', marginBottom:'10px'}}>
-               <img src={selectedWorker.photo || "https://via.placeholder.com/50"} style={styles.avatar}/>
-               <h3 style={{margin:0}}>Manage {selectedWorker.name}</h3>
-               <button onClick={async() => {if(confirm("Delete?")) await deleteDoc(doc(db,"workers",selectedWorker.id))}} style={{marginLeft:'auto'}}>🗑️</button>
+            <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
+               <img src={selectedWorker.photo || "https://via.placeholder.com/60"} style={styles.largeAvatar}/>
+               <div style={{flex:1}}>
+                 <h3 style={{margin:0}}>{selectedWorker.name}</h3>
+                 <p style={{margin:0, fontSize:'12px', color:'#666'}}>Worker ID: {selectedWorker.id}</p>
+               </div>
+               <button onClick={async() => {if(confirm("Khatam karein is worker ko?")) await deleteDoc(doc(db,"workers",selectedWorker.id))}} style={styles.delBtn}>🗑️</button>
             </div>
 
-            <div style={{display:'flex', gap:'5px', marginBottom:'15px'}}>
-              <input type="number" placeholder="Dihadi" value={dailyWageInput} onChange={(e)=>setDailyWageInput(e.target.value)} style={styles.input}/>
-              <button onClick={updateWage} style={{...styles.blueBtn, width:'80px'}}>Set</button>
+            {/* Dihadi Set Section */}
+            <div style={{display:'flex', gap:'5px', marginTop:'15px'}}>
+              <input type="number" placeholder="Set Dihadi (e.g. 500)" value={dailyWageInput} onChange={(e)=>setDailyWageInput(e.target.value)} style={styles.input}/>
+              <button onClick={updateWage} style={{...styles.blueBtn, width:'100px'}}>Set</button>
             </div>
 
             <div style={styles.statGrid}>
-              <div style={{...styles.stat, color:'red'}}>Advance:<br/><b>₹{selectedWorker.totalAdvance}</b></div>
-              <div style={{...styles.stat, color:'blue'}}>Kamayi:<br/><b>₹{totalEarned}</b></div>
-              <div style={{...styles.stat, color:'green', background:'#f0fdf4'}}>Baki:<br/><b>₹{bakiPayment}</b></div>
+              <div style={{...styles.stat, color:'red'}}>Advance<br/><b>₹{selectedWorker.totalAdvance}</b></div>
+              <div style={{...styles.stat, color:'blue'}}>Kamayi<br/><b>₹{totalEarned}</b></div>
+              <div style={{...styles.stat, color:'green', background:'#f1f8e9'}}>Baki<br/><b>₹{bakiPayment}</b></div>
             </div>
 
-            <button onClick={() => setShowAttendance(!showAttendance)} style={styles.toggleBtn}>
-              {showAttendance ? "Hide Attendance" : "✅ Manage Attendance"}
-            </button>
-
-            {showAttendance && (
-              <div style={styles.scrollBox}>
-                {selectedWorker.approvedAttendance?.map((a, i) => (
-                  <div key={i} style={styles.row}>
-                    <span>{a.date} ({a.status})</span>
-                    <div style={{display:'flex', gap:'5px'}}>
-                      <button onClick={() => handleAttAction(i, 'Approved')} style={styles.miniBtnG}>✔</button>
-                      <button onClick={() => handleAttAction(i, 'Rejected')} style={styles.miniBtnR}>✖</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <input type="number" placeholder="Amount (₹)" value={amount} onChange={(e)=>setAmount(e.target.value)} style={{...styles.input, marginTop:'15px'}}/>
+            <input type="number" placeholder="Enter Amount (₹)" value={amount} onChange={(e)=>setAmount(e.target.value)} style={{...styles.input, marginTop:'15px'}}/>
             <div style={styles.btnStack}>
               <button onClick={() => processFinance('adv')} style={styles.redBtn}>Dena Advance (+)</button>
               <button onClick={() => processFinance('settle')} style={styles.orangeBtn}>Advance se Kaatna (-)</button>
@@ -172,14 +164,45 @@ export default function AdminPanel() {
             </div>
           </div>
 
+          {/* History Tabs Section */}
           <div style={styles.card}>
-            <h4>📜 History</h4>
-            <div style={styles.scrollBox}>
-              <p style={{fontSize:'12px', color:'#666'}}>ADVANCE RECORDS</p>
-              {selectedWorker.advanceHistory?.map((h,i)=>(<div key={i} style={styles.row}><span>{h.date}</span><span style={{color:h.amount<0?'green':'red'}}>{h.amount}</span></div>))}
-              <hr/>
-              <p style={{fontSize:'12px', color:'#666'}}>CASH PAYMENTS</p>
-              {selectedWorker.paymentHistory?.map((h,i)=>(<div key={i} style={styles.row}><span>{h.date}</span><span style={{color:'green'}}>₹{h.amount}</span></div>))}
+            <div style={styles.tabBar}>
+              <button onClick={()=>setActiveTab('adv')} style={{...styles.tab, color: activeTab==='adv'?'#764ba2':'#999', borderBottom: activeTab==='adv'?'2px solid #764ba2':''}}>Advance History</button>
+              <button onClick={()=>setActiveTab('earn')} style={{...styles.tab, color: activeTab==='earn'?'#764ba2':'#999', borderBottom: activeTab==='earn'?'2px solid #764ba2':''}}>Haziri (Days)</button>
+              <button onClick={()=>setActiveTab('cash')} style={{...styles.tab, color: activeTab==='cash'?'#764ba2':'#999', borderBottom: activeTab==='cash'?'2px solid #764ba2':''}}>Payments</button>
+            </div>
+
+            <div style={styles.historyContent}>
+              {activeTab === 'adv' && (
+                selectedWorker.advanceHistory?.length > 0 ? (
+                  selectedWorker.advanceHistory.map((h, i) => (
+                    <div key={i} style={styles.row}><span>{h.date}</span><span style={{color:h.amount<0?'green':'red', fontWeight:'bold'}}>{h.amount > 0 ? `+${h.amount}` : h.amount}</span></div>
+                  ))
+                ) : <p style={styles.empty}>No Advance History</p>
+              )}
+              
+              {activeTab === 'earn' && (
+                selectedWorker.approvedAttendance?.length > 0 ? (
+                  selectedWorker.approvedAttendance.map((a, i) => (
+                    <div key={i} style={styles.row}>
+                      <span>{a.date} ({a.status})</span>
+                      <div style={{display:'flex', gap:'8px'}}>
+                        <button onClick={() => handleAttAction(i, 'Approved')} style={{...styles.miniBtn, background:a.status==='Approved'?'#4caf50':'#ccc'}}>✔</button>
+                        <button onClick={() => handleAttAction(i, 'Rejected')} style={{...styles.miniBtn, background:a.status==='Rejected'?'#f44336':'#ccc'}}>✖</button>
+                        <button onClick={() => handleAttAction(i, 'delete')} style={{...styles.miniBtn, background:'#666'}}>🗑️</button>
+                      </div>
+                    </div>
+                  ))
+                ) : <p style={styles.empty}>No Attendance Found</p>
+              )}
+
+              {activeTab === 'cash' && (
+                selectedWorker.paymentHistory?.length > 0 ? (
+                  selectedWorker.paymentHistory.map((h, i) => (
+                    <div key={i} style={styles.row}><span>{h.date}</span><span style={{color:'green', fontWeight:'bold'}}>₹{h.amount}</span></div>
+                  ))
+                ) : <p style={styles.empty}>No Payment Records</p>
+              )}
             </div>
           </div>
         </>
@@ -189,22 +212,27 @@ export default function AdminPanel() {
 }
 
 const styles = {
-  container: { padding: '15px', maxWidth: '450px', margin: '0 auto', background: '#f0f2f5', minHeight: '100vh', fontFamily:'sans-serif' },
-  card: { background: '#fff', padding: '15px', borderRadius: '15px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: '15px' },
-  input: { width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', boxSizing:'border-box' },
-  statGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '5px' },
-  stat: { padding: '10px', background: '#f9fafb', borderRadius: '8px', textAlign: 'center', fontSize: '11px', border:'1px solid #eee' },
+  container: { padding: '15px', maxWidth: '480px', margin: '0 auto', background: '#f8f9fa', minHeight: '100vh', fontFamily:'sans-serif' },
+  card: { background: '#fff', padding: '15px', borderRadius: '15px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: '15px' },
+  workerGrid: { display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '10px' },
+  workerItem: { minWidth: '75px', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px', borderRadius: '12px', cursor: 'pointer', transition:'0.3s' },
+  avatar: { width: '45px', height: '45px', borderRadius: '50%', objectFit: 'cover' },
+  largeAvatar: { width: '65px', height: '65px', borderRadius: '50%', objectFit: 'cover', border:'2px solid #764ba2' },
+  statGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginTop: '15px' },
+  stat: { padding: '12px', background: '#fbfbfb', borderRadius: '10px', textAlign: 'center', fontSize: '11px', border: '1px solid #eee' },
+  input: { width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', boxSizing: 'border-box', outline:'none' },
   btnStack: { display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' },
   blueBtn: { width: '100%', padding: '12px', background: '#3498db', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold' },
-  redBtn: { padding: '15px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold' },
-  orangeBtn: { padding: '15px', background: '#f59e0b', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold' },
-  greenBtn: { padding: '15px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold' },
-  avatar: { width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover' },
-  scrollBox: { marginTop:'10px', maxHeight:'150px', overflowY:'auto', padding:'5px', border:'1px solid #eee', borderRadius:'8px' },
-  row: { display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #f9f9f9', fontSize:'13px' },
-  toggleBtn: { width:'100%', padding:'10px', background:'#eee', border:'none', borderRadius:'8px', fontSize:'12px', marginTop:'10px' },
-  miniBtnG: { background:'#10b981', color:'#fff', border:'none', padding:'3px 8px', borderRadius:'4px' },
-  miniBtnR: { background:'#ef4444', color:'#fff', border:'none', padding:'3px 8px', borderRadius:'4px' },
-  loginOverlay: { height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#764ba2' },
-  loginBox: { background: '#fff', padding: '30px', borderRadius: '20px', textAlign: 'center' }
+  redBtn: { padding: '15px', background: '#ef5350', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold' },
+  orangeBtn: { padding: '15px', background: '#ffa726', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold' },
+  greenBtn: { padding: '15px', background: '#66bb6a', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold' },
+  tabBar: { display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #eee', marginBottom: '10px' },
+  tab: { padding: '12px 5px', border: 'none', background: 'none', fontSize: '11px', fontWeight: 'bold', cursor:'pointer' },
+  historyContent: { maxHeight: '250px', overflowY: 'auto' },
+  row: { display: 'flex', justifyContent: 'space-between', alignItems:'center', padding: '12px 0', borderBottom: '1px solid #f9f9f9', fontSize: '13px' },
+  miniBtn: { border: 'none', color: '#fff', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer' },
+  delBtn: { background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' },
+  empty: { textAlign:'center', color:'#999', fontSize:'12px', padding:'20px 0' },
+  loginOverlay: { height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+  loginBox: { background: '#fff', padding: '30px', borderRadius: '25px', textAlign: 'center', width:'80%' }
 };
