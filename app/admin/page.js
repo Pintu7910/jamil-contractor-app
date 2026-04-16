@@ -53,8 +53,8 @@ export default function AdminPanel() {
       }
       await setDoc(doc(db, "workers", newId), {
         name: newName, photo: photoURL, dailyWage: 0,
-        totalAdvance: 0, totalPaidEarnings: 0, approvedAttendance: [],
-        advanceHistory: [], paymentHistory: []
+        totalPaidEarnings: 0, approvedAttendance: [],
+        paymentHistory: []
       });
       alert(`✅ Worker Registered! ID: ${newId}`);
       setNewName(''); setPhotoBase64('');
@@ -74,7 +74,6 @@ export default function AdminPanel() {
     const date = new Date().toLocaleDateString('en-GB');
     const val = Number(amount);
 
-    // Ab har entry 'totalPaidEarnings' mein jayegi
     await updateDoc(workerRef, { 
       totalPaidEarnings: increment(val), 
       paymentHistory: arrayUnion({ date, amount: val, note: "Payment / Advance" }) 
@@ -94,10 +93,10 @@ export default function AdminPanel() {
     await updateDoc(doc(db, "workers", selectedWorker.id), { approvedAttendance: list });
   };
 
-  // Calculation Logic: Kamayi - (Paisa Diya + Purana Udhaar) = Baki
+  // Calculation Logic: Kul Wages - Paisa Diya = Baki Balance
   const approvedAttendance = selectedWorker?.approvedAttendance?.filter(a => a.status === 'Approved') || [];
   const totalEarned = approvedAttendance.length * (selectedWorker?.dailyWage || 0);
-  const bakiPayment = totalEarned - (selectedWorker?.totalPaidEarnings || 0) - (selectedWorker?.totalAdvance || 0);
+  const bakiPayment = totalEarned - (selectedWorker?.totalPaidEarnings || 0);
 
   if (!isAuthorized) return (
     <div style={styles.loginOverlay}>
@@ -144,8 +143,7 @@ export default function AdminPanel() {
             </div>
 
             <div style={styles.statGrid}>
-              <div style={{...styles.stat, color:'red'}}>Purana Udhaar<br/><b>₹{selectedWorker.totalAdvance}</b></div>
-              <div style={{...styles.stat, color:'blue'}}>Kul Kamayi<br/><b>₹{totalEarned}</b></div>
+              <div style={{...styles.stat, color:'blue'}}>Kul Kamayi (Wages)<br/><b>₹{totalEarned}</b></div>
               <div style={{...styles.stat, color:'green', background:'#f1f8e9'}}>Baki (Pending)<br/><b>₹{bakiPayment}</b></div>
             </div>
 
@@ -161,7 +159,6 @@ export default function AdminPanel() {
             <div style={styles.tabBar}>
               <button onClick={()=>setActiveTab('earn')} style={{...styles.tab, borderBottom: activeTab==='earn'?'2px solid #764ba2':''}}>Haziri</button>
               <button onClick={()=>setActiveTab('cash')} style={{...styles.tab, borderBottom: activeTab==='cash'?'2px solid #764ba2':''}}>Payments</button>
-              <button onClick={()=>setActiveTab('adv')} style={{...styles.tab, borderBottom: activeTab==='adv'?'2px solid #764ba2':''}}>Udhaar History</button>
             </div>
 
             <div style={styles.historyContent}>
@@ -181,12 +178,6 @@ export default function AdminPanel() {
               {activeTab === 'cash' && (
                 selectedWorker.paymentHistory?.map((h, i) => (
                   <div key={i} style={styles.row}><span>{h.date}</span><span style={{color:'green', fontWeight:'bold'}}>₹{h.amount}</span></div>
-                ))
-              )}
-
-              {activeTab === 'adv' && (
-                selectedWorker.advanceHistory?.map((h, i) => (
-                  <div key={i} style={styles.row}><span>{h.date}</span><span style={{color:h.amount<0?'green':'red'}}>₹{h.amount}</span></div>
                 ))
               )}
             </div>
@@ -211,14 +202,14 @@ const styles = {
   workerItem: { minWidth: '75px', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px', borderRadius: '12px', cursor: 'pointer' },
   avatar: { width: '45px', height: '45px', borderRadius: '50%', objectFit: 'cover' },
   largeAvatar: { width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', border:'2px solid #764ba2' },
-  statGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginTop: '15px' },
-  stat: { padding: '10px', background: '#fbfbfb', borderRadius: '10px', textAlign: 'center', fontSize: '10px', border: '1px solid #eee' },
+  statGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '15px' },
+  stat: { padding: '12px', background: '#fbfbfb', borderRadius: '10px', textAlign: 'center', fontSize: '11px', border: '1px solid #eee' },
   input: { width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', boxSizing: 'border-box' },
   btnStack: { marginTop: '15px' },
   blueBtn: { width: '100%', padding: '12px', background: '#3498db', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold' },
   greenBtn: { width: '100%', padding: '15px', background: '#66bb6a', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold' },
   tabBar: { display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #eee', marginBottom: '10px' },
-  tab: { padding: '10px 5px', border: 'none', background: 'none', fontSize: '11px', fontWeight: 'bold', cursor:'pointer' },
+  tab: { padding: '10px 20px', border: 'none', background: 'none', fontSize: '12px', fontWeight: 'bold', cursor:'pointer' },
   historyContent: { maxHeight: '200px', overflowY: 'auto' },
   row: { display: 'flex', justifyContent: 'space-between', alignItems:'center', padding: '10px 0', borderBottom: '1px solid #f9f9f9', fontSize: '12px' },
   miniBtn: { border: 'none', color: '#fff', padding: '5px 8px', borderRadius: '5px', cursor: 'pointer' },
