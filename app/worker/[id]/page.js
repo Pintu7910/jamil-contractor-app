@@ -30,7 +30,7 @@ export default function WorkerDashboard() {
       if (snap.exists()) {
         setWorker({ id: snap.id, ...snap.data() });
       } else {
-        console.error("Database mein ye worker nahi mila!");
+        console.error("Worker not found!");
       }
       setLoading(false);
     });
@@ -44,7 +44,7 @@ export default function WorkerDashboard() {
     const alreadyMarked = worker.approvedAttendance?.some(entry => entry.date === today);
     
     if (alreadyMarked) {
-      alert("⚠️ Aaj ki haziri pehle hi lag chuki hai!");
+      alert("⚠️ Attendance all ready save!");
       return;
     }
 
@@ -58,9 +58,9 @@ export default function WorkerDashboard() {
         }),
         status: "Online"
       });
-      alert("✅ Haziri lag gayi!");
+      alert("✅ Attendance sucessfull!");
     } catch (error) {
-      alert("Error: Attendance update nahi ho saki.");
+      alert("Error: Attendance not update.");
     }
   };
 
