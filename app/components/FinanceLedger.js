@@ -1,104 +1,100 @@
 import React, { useState } from 'react';
 
 export default function FinanceLedger({ worker }) {
-  // States to toggle history lists
-  const [showAdvanceList, setShowAdvanceList] = useState(false);
-  const [showDeductionList, setShowDeductionList] = useState(false);
+  const [open, setOpen] = useState(null); // 'adv' or 'ded'
   
   const advance = worker?.totalAdvance || 0;
   const deducted = worker?.totalDeducted || 0;
   const pending = advance - deducted;
-  
-  // Data arrays from Firebase
-  const advanceHistory = worker?.advanceHistory || [];
-  const deductionHistory = worker?.deductionHistory || [];
 
   const styles = {
-    container: { width: '100%', display: 'flex', flexDirection: 'column', gap: '12px', margin: '15px 0' },
-    infoButton: {
+    container: { width: '100%', marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '15px' },
+    title: { color: '#fff', fontSize: '14px', fontWeight: 'bold', letterSpacing: '1px', marginBottom: '5px' },
+    card: {
       background: '#fff',
-      borderRadius: '15px',
-      padding: '15px 20px',
+      borderRadius: '20px',
+      padding: '20px',
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-      border: '1px solid #eee',
+      boxShadow: '0 8px 20px rgba(0,0,0,0.1)',
       cursor: 'pointer',
-      width: '100%'
+      minHeight: '80px', // Unchai badha di gayi hai
+      border: '1px solid #f0f0f0',
+      transition: 'all 0.3s ease'
     },
-    historyPanel: {
-      background: '#f9f9f9',
+    iconCircle: {
+      width: '45px',
+      height: '45px',
       borderRadius: '12px',
-      padding: '12px',
-      marginTop: '-8px',
-      borderLeft: '4px solid #764ba2',
-      boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)'
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      fontSize: '20px',
+      marginRight: '15px'
     },
-    label: { fontSize: '14px', color: '#555', fontWeight: '500' },
-    value: { fontSize: '18px', fontWeight: 'bold' }
+    labelGroup: { flex: 1 },
+    mainLabel: { fontSize: '16px', fontWeight: 'bold', color: '#333', display: 'block' },
+    subLabel: { fontSize: '11px', color: '#888' },
+    amount: { fontSize: '20px', fontWeight: '800' }
   };
 
   return (
     <div style={styles.container}>
-      <h4 style={{color: '#fff', margin: '0 5px', fontSize: '14px', opacity: 0.9}}>AAPKA HISAB (PAYMENT LEDGER)</h4>
+      <p style={styles.title}>💰 AAPKA HISAB-KITAB</p>
       
-      {/* 1. TOTAL ADVANCE SECTION */}
+      {/* 1. Total Advance Card */}
       <div 
-        style={{...styles.infoButton, border: showAdvanceList ? '2px solid #ef4444' : '1px solid #eee'}} 
-        onClick={() => { setShowAdvanceList(!showAdvanceList); setShowDeductionList(false); }}
+        style={{...styles.card, borderLeft: '6px solid #ef4444'}} 
+        onClick={() => setOpen(open === 'adv' ? null : 'adv')}
       >
-        <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
-          <span style={styles.label}>💰 Total Advance Liya:</span>
-          <span style={{fontSize:'10px', color:'#ef4444'}}>{showAdvanceList ? '▲' : '▼ View'}</span>
+        <div style={{...styles.iconCircle, background: '#fee2e2', color: '#ef4444'}}>💵</div>
+        <div style={styles.labelGroup}>
+          <span style={styles.mainLabel}>Total Advance</span>
+          <span style={styles.subLabel}>{open === 'adv' ? 'Click to hide details' : 'Click to see dates'}</span>
         </div>
-        <span style={{...styles.value, color: '#ef4444'}}>₹{advance}</span>
+        <span style={{...styles.amount, color: '#ef4444'}}>₹{advance}</span>
       </div>
-
-      {showAdvanceList && (
-        <div style={styles.historyPanel}>
-          <p style={{margin:'0 0 8px 0', fontSize:'11px', fontWeight:'bold', color:'#ef4444'}}>ADVANCE LENE KA RECORD:</p>
-          {advanceHistory.length > 0 ? (
-            advanceHistory.map((item, i) => (
-              <div key={i} style={{display:'flex', justifyContent:'space-between', padding:'6px 0', borderBottom:'1px solid #eee', fontSize:'13px'}}>
-                <span>{item.date}</span>
-                <span style={{fontWeight:'600'}}>+ ₹{item.amount}</span>
-              </div>
-            ))
-          ) : <p style={{fontSize:'12px', color:'#999'}}>Koi record nahi hai.</p>}
+      {open === 'adv' && (
+        <div style={{background: 'rgba(255,255,255,0.9)', padding: '15px', borderRadius: '15px', marginTop: '-10px', fontSize: '13px'}}>
+          {worker?.advanceHistory?.map((h, i) => (
+            <div key={i} style={{display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #eee'}}>
+              <span>{h.date}</span> <b>₹{h.amount}</b>
+            </div>
+          )) || "No record found"}
         </div>
       )}
 
-      {/* 2. KATWA DIYA SECTION */}
+      {/* 2. Katwa Diya Card */}
       <div 
-        style={{...styles.infoButton, border: showDeductionList ? '2px solid #22c55e' : '1px solid #eee'}} 
-        onClick={() => { setShowDeductionList(!showDeductionList); setShowAdvanceList(false); }}
+        style={{...styles.card, borderLeft: '6px solid #22c55e'}}
+        onClick={() => setOpen(open === 'ded' ? null : 'ded')}
       >
-        <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
-          <span style={styles.label}>✅ Kitna Katwa Diya:</span>
-          <span style={{fontSize:'10px', color:'#22c55e'}}>{showDeductionList ? '▲' : '▼ View'}</span>
+        <div style={{...styles.iconCircle, background: '#dcfce7', color: '#22c55e'}}>✂️</div>
+        <div style={styles.labelGroup}>
+          <span style={styles.mainLabel}>Katwa Diya</span>
+          <span style={styles.subLabel}>Deducted till now</span>
         </div>
-        <span style={{...styles.value, color: '#22c55e'}}>₹{deducted}</span>
+        <span style={{...styles.amount, color: '#22c55e'}}>₹{deducted}</span>
       </div>
-
-      {showDeductionList && (
-        <div style={{...styles.historyPanel, borderLeftColor: '#22c55e'}}>
-          <p style={{margin:'0 0 8px 0', fontSize:'11px', fontWeight:'bold', color:'#22c55e'}}>PAISA KATNE KA RECORD:</p>
-          {deductionHistory.length > 0 ? (
-            deductionHistory.map((item, i) => (
-              <div key={i} style={{display:'flex', justifyContent:'space-between', padding:'6px 0', borderBottom:'1px solid #eee', fontSize:'13px'}}>
-                <span>{item.date}</span>
-                <span style={{fontWeight:'600', color:'#22c55e'}}>- ₹{item.amount}</span>
-              </div>
-            ))
-          ) : <p style={{fontSize:'12px', color:'#999'}}>Abhi tak kuch nahi kata.</p>}
+      {open === 'ded' && (
+        <div style={{background: 'rgba(255,255,255,0.9)', padding: '15px', borderRadius: '15px', marginTop: '-10px', fontSize: '13px'}}>
+          {worker?.deductionHistory?.map((h, i) => (
+            <div key={i} style={{display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #eee'}}>
+              <span>{h.date}</span> <b>- ₹{h.amount}</b>
+            </div>
+          )) || "No record found"}
         </div>
       )}
 
-      {/* 3. BAKAYA (PENDING) - NO CLICK */}
-      <div style={{...styles.infoButton, background: '#333', border: 'none'}}>
-        <span style={{...styles.label, color: '#fff', fontWeight: 'bold'}}>⏳ Bakaya (Pending):</span>
-        <span style={{...styles.value, color: '#fff', fontSize: '22px'}}>₹{pending}</span>
+      {/* 3. Bakaya (Pending) - High Contrast Card */}
+      <div style={{...styles.card, background: '#1a1a1a', border: 'none'}}>
+        <div style={{...styles.iconCircle, background: '#333', color: '#fff'}}>⏳</div>
+        <div style={styles.labelGroup}>
+          <span style={{...styles.mainLabel, color: '#fff'}}>Bakaya (Pending)</span>
+          <span style={{...styles.subLabel, color: '#666'}}>Total balance to pay</span>
+        </div>
+        <span style={{...styles.amount, color: '#fff', fontSize: '24px'}}>₹{pending}</span>
       </div>
     </div>
   );
