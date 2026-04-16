@@ -1,16 +1,16 @@
 import React from 'react';
 
 /**
- * IDCard Component: Updated with "Mark Attendance" button functionality.
+ * IDCard Component: 
+ * Isme 'onMark' prop zaroori hai taaki parent (page.js) ka function call ho sake.
  */
-export default function IDCard({ worker, onMark }) { // onMark prop add kiya gaya hai
+export default function IDCard({ worker, onMark }) {
   const styles = {
     cardContainer: {
       background: '#fff',
       borderRadius: '25px',
       width: '100%',
       maxWidth: '360px',
-      height: 'auto', // Content ke hisaab se adjust hoga taaki button fit aaye
       margin: '20px auto',
       overflow: 'hidden',
       boxShadow: '0 15px 35px rgba(0,0,0,0.2)',
@@ -19,7 +19,6 @@ export default function IDCard({ worker, onMark }) { // onMark prop add kiya gay
       display: 'flex',
       flexDirection: 'column',
       position: 'relative',
-      paddingBottom: '20px' // Bottom padding for look
     },
     punchHole: {
       width: '40px',
@@ -74,12 +73,15 @@ export default function IDCard({ worker, onMark }) { // onMark prop add kiya gay
       backgroundColor: '#f8f8f8'
     },
     detailsSection: {
-      padding: '20px 20px',
+      padding: '25px 20px',
       textAlign: 'center',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center'
     },
     workerName: {
       margin: '0',
-      fontSize: '26px',
+      fontSize: '24px',
       color: '#2d3436',
       fontWeight: '800',
       textTransform: 'uppercase',
@@ -98,47 +100,36 @@ export default function IDCard({ worker, onMark }) { // onMark prop add kiya gay
       fontSize: '18px',
       fontWeight: '700'
     },
-    statusBadge: {
-      padding: '8px 25px',
-      borderRadius: '50px',
-      fontSize: '14px',
-      fontWeight: '700',
-      color: '#fff',
-      textTransform: 'uppercase',
-      backgroundColor: worker?.status === 'Online' ? '#27ae60' : '#d63031',
-      letterSpacing: '0.5px',
-      display: 'inline-block',
-      marginBottom: '20px'
-    },
-    // ✅ Naya Button Style
+    // ✅ Attendance Button Style
     attendanceBtn: {
       width: '90%',
-      margin: '10px auto',
-      padding: '12px',
-      borderRadius: '12px',
+      padding: '14px',
+      borderRadius: '15px',
       border: 'none',
-      background: '#2ecc71',
+      background: '#2ecc71', // Green color
       color: '#fff',
-      fontSize: '15px',
+      fontSize: '16px',
       fontWeight: 'bold',
       cursor: 'pointer',
-      boxShadow: '0 4px 10px rgba(46, 204, 113, 0.3)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '8px',
-      transition: '0.3s'
+      boxShadow: '0 5px 15px rgba(46, 204, 113, 0.4)',
+      transition: 'all 0.3s ease',
+      marginTop: '10px',
+      zIndex: 5
     },
     watermark: {
       position: 'absolute',
-      bottom: '80px',
-      left: '-10px',
-      fontSize: '80px',
+      bottom: '50px',
+      left: '-20px',
+      fontSize: '90px',
       fontWeight: 'bold',
       color: 'rgba(118, 75, 162, 0.03)',
       transform: 'rotate(-20deg)',
       zIndex: 0,
       pointerEvents: 'none'
+    },
+    footerLine: {
+      height: '12px',
+      background: 'linear-gradient(135deg, #667eea, #764ba2)',
     }
   };
 
@@ -162,21 +153,30 @@ export default function IDCard({ worker, onMark }) { // onMark prop add kiya gay
       </div>
 
       <div style={styles.detailsSection}>
-        <h2 style={styles.workerName}>{worker?.name || "MD JAMIL ANSARI"}</h2>
+        <h2 style={styles.workerName}>{worker?.name || "WORKER NAME"}</h2>
         <div style={styles.idLabel}>Unique ID</div>
         <p style={styles.workerId}>JC/W/{worker?.id || "----"}</p>
         
-        <span style={styles.statusBadge}>
-          {worker?.status || "Offline"}
-        </span>
-
-        {/* ✅ Attendance Button Jo Ab Kaam Karega */}
-        <button onClick={onMark} style={styles.attendanceBtn}>
+        {/* ✅ Haziri Lagane Wala Button */}
+        <button 
+          onClick={() => {
+            console.log("Attendance Button Clicked");
+            if (onMark) {
+                onMark(); // Ye parent (page.js) ke function ko chalayega
+            } else {
+                alert("Error: Attendance function not connected!");
+            }
+          }} 
+          style={styles.attendanceBtn}
+          onMouseOver={(e) => e.target.style.transform = 'scale(1.02)'}
+          onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
+        >
           ✅ AAJ KI HAZIRI LAGAYEIN
         </button>
       </div>
 
       <div style={styles.watermark}>JC</div>
+      <div style={styles.footerLine}></div>
     </div>
   );
 }
