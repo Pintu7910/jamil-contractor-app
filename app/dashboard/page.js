@@ -14,24 +14,18 @@ export default function WorkerDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Worker ID '1234' ka real-time data load ho raha hai
     const id = "1234"; 
     const unsub = onSnapshot(doc(db, "workers", id), (snap) => {
       if (snap.exists()) {
         setWorker({ id: snap.id, ...snap.data() });
-      } else {
-        console.log("Worker not found");
       }
       setLoading(false);
     });
     return () => unsub();
   }, []);
 
-  // Professional Attendance Logic
   const handleMarkAttendance = async () => {
     const today = new Date().toLocaleDateString('en-GB');
-    
-    // Check if attendance already marked for today
     const alreadyMarked = worker.approvedAttendance?.some(entry => entry.date === today);
     
     if (alreadyMarked) {
@@ -47,54 +41,36 @@ export default function WorkerDashboard() {
           time: new Date().toLocaleTimeString(),
           status: "Present"
         }),
-        status: "Online" // Dashboard par status green ho jayega
+        status: "Online"
       });
-      alert("✅ Haziri kamyabi se lag gayi!");
+      alert("✅ Haziri lag gayi!");
     } catch (error) {
-      alert("Error: Attendance nahi lag payi.");
+      alert("Error: Attendance fail.");
     }
   };
 
-  // Loading Screen Style
   if (loading) return (
-    <div style={{
-      textAlign:'center', padding:'100px 20px', color:'#fff', 
-      background: '#764ba2', minHeight: '100vh', fontFamily:'sans-serif'
-    }}>
-      <h3 style={{letterSpacing:'2px'}}>JAMIL CONTRACTOR</h3>
-      <p style={{opacity:0.7}}>Data load ho raha hai...</p>
-    </div>
-  );
-
-  // Agar worker data nahi mila toh clean error dikhega
-  if (!worker) return (
-    <div style={{
-      textAlign:'center', padding:'100px 20px', color:'#d63031', 
-      background: '#fff', minHeight: '100vh', fontFamily:'sans-serif'
-    }}>
-      <h2>Oops! Problem Aa Gayi</h2>
-      <p>Worker ID '1234' database mein nahi mili.</p>
-      <button onClick={() => window.location.reload()} style={{
-        padding: '12px 25px', marginTop: '20px', borderRadius:'10px', 
-        background:'#764ba2', color:'#fff', border:'none'
-      }}>Refresh Karein</button>
+    <div style={styles.loadingScreen}>
+      <div style={styles.glassLoader}>
+        <h3 style={{margin:0}}>JAMIL CONTRACTOR</h3>
+        <p style={{fontSize:'12px', opacity:0.6}}>Loading Dashboard...</p>
+      </div>
     </div>
   );
 
   return (
     <div style={styles.dashboardLayout}>
-      {/* 🏛️ App Header */}
-      <header style={{textAlign:'center', color:'#fff', marginBottom:'15px'}}>
-        <h2 style={{margin:0, fontSize: '22px', fontWeight:'800', letterSpacing:'1px'}}>MD JAMIL ANSARI</h2>
-        <p style={{fontSize:'12px', opacity:0.8, fontWeight:'500'}}>Worker Dashboard Control</p>
+      {/* 🔮 Glassy Header */}
+      <header style={styles.glassHeader}>
+        <h2 style={styles.headerTitle}>MD JAMIL ANSARI</h2>
+        <p style={styles.headerSub}>Worker Dashboard Control</p>
       </header>
 
-      {/* 1. Physical ID Badge Style Card */}
+      {/* Main Content Sections */}
       <div style={styles.contentWrapper}>
         <IDCard worker={worker} />
       </div>
 
-      {/* 2. Haziri (Attendance) Control Buttons */}
       <div style={styles.contentWrapper}>
         <AttendanceControl 
           onMarkAttendance={handleMarkAttendance} 
@@ -102,58 +78,86 @@ export default function WorkerDashboard() {
         />
       </div>
 
-      {/* 3. Finance Ledger (Wages, Advance & Bakaya) */}
       <div style={styles.contentWrapper}>
         <FinanceLedger worker={worker} />
       </div>
 
-      {/* 4. PDF Full Record Download */}
       <div style={styles.contentWrapper}>
-        <button 
-          onClick={() => downloadWorkerHistory(worker)} 
-          style={styles.pdfBtn}
-        >
-          📥 Download My Full Record (PDF)
+        <button onClick={() => downloadWorkerHistory(worker)} style={styles.glassPdfBtn}>
+          📥 Download Full Record (PDF)
         </button>
       </div>
 
-      {/* Footer Branded Line */}
-      <footer style={{textAlign:'center', color:'#fff', fontSize:'10px', marginTop:'25px', opacity:0.6}}>
+      <footer style={styles.footerText}>
         © 2026 Jamil Contractor System | Jamshedpur
       </footer>
     </div>
   );
 }
 
-// Professional Dashboard Styles
+// 💎 Glassmorphism Style Configuration
 const styles = {
   dashboardLayout: {
-    padding: '25px 15px',
-    background: 'linear-gradient(180deg, #764ba2 0%, #667eea 100%)', // App theme
+    padding: '20px 15px',
+    background: 'radial-gradient(circle at top left, #8e44ad, #3498db)', // Vibrant base for glass effect
     minHeight: '100vh',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '10px',
-    fontFamily: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+    gap: '15px',
+    fontFamily: '"Segoe UI", sans-serif'
   },
+  loadingScreen: {
+    background: '#764ba2',
+    height: '100vh',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    color: '#fff'
+  },
+  glassLoader: {
+    padding: '30px',
+    background: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: '20px',
+    backdropFilter: 'blur(10px)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    textAlign: 'center'
+  },
+  glassHeader: {
+    width: '100%',
+    maxWidth: '400px',
+    padding: '20px',
+    background: 'rgba(255, 255, 255, 0.1)', // Frosty effect
+    borderRadius: '20px',
+    backdropFilter: 'blur(15px)', // Blurring the background
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    textAlign: 'center',
+    boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.2)'
+  },
+  headerTitle: { margin: 0, color: '#fff', fontSize: '20px', fontWeight: '800' },
+  headerSub: { margin: '5px 0 0', color: 'rgba(255,255,255,0.7)', fontSize: '11px' },
   contentWrapper: {
     width: '100%',
-    maxWidth: '400px', // Mobile par premium look ke liye
+    maxWidth: '400px',
   },
-  pdfBtn: {
+  glassPdfBtn: {
     width: '100%',
-    marginTop: '15px',
     padding: '18px',
     borderRadius: '20px',
-    border: '1px solid rgba(255,255,255,0.4)',
-    background: 'rgba(255,255,255,0.15)',
+    border: '1px solid rgba(255, 255, 255, 0.3)',
+    background: 'rgba(255, 255, 255, 0.15)',
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: '15px',
+    fontSize: '14px',
     cursor: 'pointer',
-    backdropFilter: 'blur(12px)',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-    transition: 'all 0.3s ease'
+    backdropFilter: 'blur(10px)',
+    transition: '0.3s ease',
+    boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
+  },
+  footerText: {
+    textAlign: 'center', 
+    color: 'rgba(255,255,255,0.5)', 
+    fontSize: '10px', 
+    marginTop: '20px'
   }
 };
