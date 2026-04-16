@@ -4,7 +4,7 @@ import { db } from '@/lib/firebase';
 import { doc, onSnapshot, updateDoc, arrayUnion } from 'firebase/firestore';
 import { useParams } from 'next/navigation';
 
-// ✅ Fix: Next.js standard paths (@/) use karein
+// ✅ Fix: Next.js standard paths (@/) use karein taaki Vercel dhoond sake
 import IDCard from '@/components/IDCard';
 import FinanceLedger from '@/components/FinanceLedger';
 import AttendanceControl from '@/components/AttendanceControl';
@@ -18,7 +18,9 @@ export default function WorkerDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // 🗑️ Hardcoded "1234" khatam! Ab ye URL ki ID (jaise 4168) use karega.
     const workerId = params.id; 
+
     if (!workerId) {
       setLoading(false);
       return;
@@ -28,7 +30,7 @@ export default function WorkerDashboard() {
       if (snap.exists()) {
         setWorker({ id: snap.id, ...snap.data() });
       } else {
-        console.error("Worker nahi mila!");
+        console.error("Database mein worker nahi mila!");
       }
       setLoading(false);
     });
@@ -58,11 +60,11 @@ export default function WorkerDashboard() {
       });
       alert("✅ Haziri lag gayi!");
     } catch (error) {
-      alert("Error: Update failed.");
+      alert("Error: Attendance record update nahi ho saka.");
     }
   };
 
-  if (loading) return <div style={{background: '#764ba2', height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff'}}>Loading...</div>;
+  if (loading) return <div style={{background: '#764ba2', height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff'}}>Loading Dashboard...</div>;
   if (!worker) return <div style={{background: '#764ba2', height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff'}}>Worker Not Found!</div>;
 
   return (
@@ -70,11 +72,12 @@ export default function WorkerDashboard() {
       <header style={{width: '100%', maxWidth: '400px', padding: '20px', background: 'rgba(255,255,255,0.1)', borderRadius: '20px', textAlign: 'center'}}>
         <h2 style={{margin: 0, color: '#fff'}}>MD JAMIL ANSARI</h2>
       </header>
+
       <div style={{width: '100%', maxWidth: '400px'}}><IDCard worker={worker} /></div>
       <div style={{width: '100%', maxWidth: '400px'}}><AttendanceControl onMarkAttendance={handleMarkAttendance} attendanceHistory={worker.approvedAttendance} /></div>
       <div style={{width: '100%', maxWidth: '400px'}}><FinanceLedger worker={worker} /></div>
       <div style={{width: '100%', maxWidth: '400px'}}>
-        <button onClick={() => downloadWorkerHistory(worker)} style={{width: '100%', padding: '18px', borderRadius: '20px', background: 'rgba(255,255,255,0.15)', color: '#fff', fontWeight: 'bold'}}>📥 Download PDF</button>
+        <button onClick={() => downloadWorkerHistory(worker)} style={{width: '100%', padding: '18px', borderRadius: '20px', background: 'rgba(255,255,255,0.15)', color: '#fff', fontWeight: 'bold'}}>📥 Download Full Record (PDF)</button>
       </div>
     </div>
   );
