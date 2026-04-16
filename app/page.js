@@ -1,9 +1,8 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { db } from '../lib/firebase'; // Ye bahar hai isliye ../ sahi hai
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { db } from '../lib/firebase'; 
+import { doc, getDoc, onSnapshot, updateDoc, arrayUnion } from 'firebase/firestore'; // updateDoc aur arrayUnion add kiya
 
-// ✅ Fix: Saare folders 'app' ke andar hain, isliye path './' se shuru hoga
 import IDCard from './components/IDCard';
 import FinanceLedger from './components/FinanceLedger';
 import AttendanceControl from './components/AttendanceControl';
@@ -30,6 +29,33 @@ export default function MainApp() {
       setLoading(false);
     });
     return () => unsub();
+  };
+
+  // ✅ Naya Function: Haziri save karne ke liye
+  const handleMarkAttendance = async () => {
+    if (!worker) return;
+    
+    const today = new Date().toLocaleDateString('en-GB'); // Format: DD/MM/YYYY
+    
+    // Check agar aaj ki haziri pehle se hai
+    const alreadyMarked = worker.approvedAttendance?.some(a => a.date === today);
+    if (alreadyMarked) {
+      return alert("Aaj ki haziri pehle hi lag chuki hai!");
+    }
+
+    try {
+      const workerRef = doc(db, "workers", worker.id);
+      await updateDoc(workerRef, {
+        approvedAttendance: arrayUnion({
+          date: today,
+          status: "Pending" // Shuruat mein pending rahegi, admin approve karega
+        })
+      });
+      alert("✅ Haziri bhej di gayi! Admin approve karenge.");
+    } catch (err) {
+      console.error(err);
+      alert("Error: Haziri nahi lag payi.");
+    }
   };
 
   const handleLogin = async (e) => {
@@ -71,15 +97,27 @@ export default function MainApp() {
   return (
     <div style={styles.dashboardLayout}>
        <header style={styles.header}><h2>MD JAMIL ANSARI</h2></header>
-       <div style={styles.box}><IDCard worker={worker} /></div>
-       <div style={styles.box}><AttendanceControl attendanceHistory={worker?.approvedAttendance} /></div>
-       <div style={styles.box}><FinanceLedger worker={worker} /></div>
+       
+       {/* Pass worker aur handleMarkAttendance dono */}
+       <div style={styles.box}>
+          <IDCard worker={worker} onMark={handleMarkAttendance} /> 
+       </div>
+       
+       <div style={styles.box}>
+          <AttendanceControl attendanceHistory={worker?.approvedAttendance} />
+       </div>
+       
+       <div style={styles.box}>
+          <FinanceLedger worker={worker} />
+       </div>
+       
        <button onClick={() => downloadWorkerHistory(worker)} style={styles.pdfBtn}>📥 Download PDF</button>
     </div>
   );
 }
 
 const styles = {
+  // Styles wahi hain jo pehle the...
   loginContainer: { background: 'linear-gradient(135deg, #667eea, #764ba2)', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' },
   glassCard: { background: 'rgba(255,255,255,0.2)', padding: '40px', borderRadius: '25px', textAlign: 'center', color: 'white', width: '90%', maxWidth: '400px', border: '1px solid rgba(255,255,255,0.3)' },
   input: { width: '100%', padding: '15px', borderRadius: '10px', border: 'none', marginBottom: '20px', textAlign: 'center', fontSize: '20px', color: '#000' },
