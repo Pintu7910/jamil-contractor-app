@@ -2,21 +2,21 @@
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot, updateDoc, arrayUnion } from 'firebase/firestore';
-import { useParams } from 'next/navigation'; // Dynamic ID ke liye zaroori hai
+import { useParams } from 'next/navigation';
 
-// Components Import
-import IDCard from '../components/IDCard';
-import FinanceLedger from '../components/FinanceLedger';
-import AttendanceControl from '../components/AttendanceControl';
-import { downloadWorkerHistory } from '../utils/pdfGenerator';
+// ✅ Imports ko sahi kiya taaki build fail na ho
+import IDCard from '@/components/IDCard';
+import FinanceLedger from '@/components/FinanceLedger';
+import AttendanceControl from '@/components/AttendanceControl';
+import { downloadWorkerHistory } from '@/utils/pdfGenerator';
 
 export default function WorkerDashboard() {
-  const params = useParams(); // URL se worker ki ID lega
+  const params = useParams(); // URL se worker ki real ID lega
   const [worker, setWorker] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Sadiya, ab yahan fixed ID "1234" ki jagah params.id ka use hoga
+    // URL se ID nikalna (jaise 4168)
     const workerId = params.id; 
 
     if (!workerId) {
@@ -24,6 +24,7 @@ export default function WorkerDashboard() {
       return;
     }
 
+    // Real-time data sync for specific worker ID
     const unsub = onSnapshot(doc(db, "workers", workerId), (snap) => {
       if (snap.exists()) {
         setWorker({ id: snap.id, ...snap.data() });
@@ -59,7 +60,7 @@ export default function WorkerDashboard() {
       });
       alert("✅ Haziri lag gayi!");
     } catch (error) {
-      alert("Error: Attendance lagane mein technical issue aaya.");
+      alert("Error: Attendance lagane mein issue aaya.");
     }
   };
 
@@ -92,7 +93,7 @@ export default function WorkerDashboard() {
         />
       </div>
 
-      {/* 💰 Finance Ledger: Ab ye Admin Panel ke hisaab se Wages aur Bakaya dikhayega */}
+      {/* 💰 Finance Section: Wages aur Bakaya dikhayega */}
       <div style={styles.contentWrapper}>
         <FinanceLedger worker={worker} />
       </div>
@@ -110,7 +111,6 @@ export default function WorkerDashboard() {
   );
 }
 
-// 💎 Glassmorphism Style Configuration
 const styles = {
   dashboardLayout: {
     padding: '20px 15px',
