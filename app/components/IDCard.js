@@ -1,11 +1,6 @@
 import React from 'react';
 
-/**
- * IDCard Component: Worker ki profile aur digital pehchan dikhane ke liye.
- * Isme Worker ki Photo, Name, ID aur Live Status shamil hai.
- */
 export default function IDCard({ worker }) {
-  // Styles for the professional ID Card look
   const styles = {
     cardContainer: {
       background: '#fff',
@@ -15,7 +10,7 @@ export default function IDCard({ worker }) {
       margin: '20px auto',
       overflow: 'hidden',
       boxShadow: '0 12px 25px rgba(0,0,0,0.15)',
-      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif',
+      fontFamily: '"Segoe UI", sans-serif',
       border: '1px solid #eee'
     },
     header: {
@@ -26,11 +21,6 @@ export default function IDCard({ worker }) {
       justifyContent: 'space-between',
       alignItems: 'center'
     },
-    logoSection: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px'
-    },
     logoCircle: {
       background: '#fff',
       color: '#764ba2',
@@ -40,81 +30,49 @@ export default function IDCard({ worker }) {
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
-      fontWeight: 'bold',
-      fontSize: '18px'
-    },
-    headerText: {
-      textAlign: 'right'
+      fontWeight: 'bold'
     },
     imageWrapper: {
       marginTop: '25px',
       display: 'flex',
-      justifyContent: 'center',
-      position: 'relative'
+      justifyContent: 'center'
     },
-    // Worker image folder logic ke liye
     profileImg: {
       width: '130px',
       height: '130px',
       borderRadius: '50%',
       border: '5px solid #fff',
       boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
-      objectFit: 'cover',
-      backgroundColor: '#f0f0f0'
+      objectFit: 'cover'
     },
     detailsSection: {
       padding: '20px',
       textAlign: 'center'
     },
-    workerName: {
-      margin: '10px 0 5px 0',
-      fontSize: '24px',
-      color: '#2d3436',
-      fontWeight: '700',
-      textTransform: 'uppercase',
-      letterSpacing: '1px'
-    },
-    workerId: {
-      margin: '0',
-      color: '#636e72',
-      fontSize: '15px',
-      fontWeight: '600'
-    },
-    statusContainer: {
-      marginTop: '15px'
-    },
-    // Live status indicator
     statusBadge: {
       padding: '6px 20px',
       borderRadius: '20px',
-      fontSize: '13px',
+      fontSize: '12px',
       fontWeight: 'bold',
       color: '#fff',
-      textTransform: 'uppercase',
-      backgroundColor: worker?.status === 'Online' ? '#27ae60' : '#d63031'
-    },
-    footerLine: {
-      height: '10px',
-      background: 'linear-gradient(90deg, #667eea, #764ba2)',
+      backgroundColor: worker?.status === 'Online' ? '#27ae60' : '#d63031',
+      display: 'inline-block',
       marginTop: '10px'
     }
   };
 
   return (
     <div style={styles.cardContainer}>
-      {/* Header Section */}
       <div style={styles.header}>
-        <div style={styles.logoSection}>
-          <div style={styles.logoCircle}>JC</div>
-        </div>
-        <div style={styles.headerText}>
-          <h4 style={{ margin: 0, fontSize: '15px', letterSpacing: '0.5px' }}>JAMIL CONTRACTOR</h4>
-          <p style={{ margin: 0, fontSize: '10px', opacity: 0.9 }}>DIGITAL WORKER ID</p>
+        <div style={styles.logoCircle}>JC</div>
+        <div style={{textAlign: 'right'}}>
+          <h4 style={{ margin: 0, fontSize: '15px' }}>JAMIL CONTRACTOR</h4>
+          <p style={{ margin: 0, fontSize: '10px', opacity: 0.9 }}>WORKER ID CARD</p>
         </div>
       </div>
 
-      {/* Profile Image Section */}
       <div style={styles.imageWrapper}>
+        {/* Yeh photo Admin Panel se database mein save honi chahiye */}
         <img 
           src={worker?.photo || "https://img.icons8.com/bubbles/100/000000/user.png"} 
           alt="Worker Profile" 
@@ -122,20 +80,12 @@ export default function IDCard({ worker }) {
         />
       </div>
 
-      {/* Info Section */}
       <div style={styles.detailsSection}>
-        <h2 style={styles.workerName}>{worker?.name || "MD JAMIL ANSARI"}</h2>
-        <p style={styles.workerId}>ID NO: {worker?.id || "----"}</p>
-        
-        {/* Status Indicator */}
-        <div style={styles.statusContainer}>
-          <span style={styles.statusBadge}>
-            {worker?.status || "OFFLINE"}
-          </span>
-        </div>
+        <h2 style={{margin: '0', fontSize: '24px', textTransform: 'uppercase'}}>{worker?.name || "MD JAMIL ANSARI"}</h2>
+        <p style={{margin: '5px 0', color: '#636e72'}}>ID NO: {worker?.id || "----"}</p>
+        <span style={styles.statusBadge}>{worker?.status || "OFFLINE"}</span>
       </div>
-
-      <div style={styles.footerLine}></div>
+      <div style={{ height: '10px', background: 'linear-gradient(90deg, #667eea, #764ba2)' }}></div>
     </div>
   );
 }
