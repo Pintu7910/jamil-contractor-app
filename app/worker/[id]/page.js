@@ -1,14 +1,14 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase';
+import { db } from '../../../lib/firebase'; // ✅ Direct Path
 import { doc, onSnapshot, updateDoc, arrayUnion } from 'firebase/firestore';
 import { useParams } from 'next/navigation';
 
-// ✅ Sahi Paths (@/ use karne se Vercel error nahi dega)
-import IDCard from '@/components/IDCard';
-import FinanceLedger from '@/components/FinanceLedger';
-import AttendanceControl from '@/components/AttendanceControl';
-import { downloadWorkerHistory } from '@/utils/pdfGenerator';
+// ✅ Direct relative paths use kiye hain
+import IDCard from '../../../components/IDCard';
+import FinanceLedger from '../../../components/FinanceLedger';
+import AttendanceControl from '../../../components/AttendanceControl';
+import { downloadWorkerHistory } from '../../../utils/pdfGenerator';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,36 +18,23 @@ export default function WorkerDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 🗑️ "1234" hat gaya hai. Ab ye URL ki ID (jaise 4168) use karega.
     const workerId = params.id; 
-
     if (!workerId) {
       setLoading(false);
       return;
     }
-
     const unsub = onSnapshot(doc(db, "workers", workerId), (snap) => {
       if (snap.exists()) {
         setWorker({ id: snap.id, ...snap.data() });
-      } else {
-        console.error("Worker not found!");
       }
       setLoading(false);
     });
-
     return () => unsub();
   }, [params.id]);
 
   const handleMarkAttendance = async () => {
     if (!worker) return;
     const today = new Date().toLocaleDateString('en-GB');
-    const alreadyMarked = worker.approvedAttendance?.some(entry => entry.date === today);
-    
-    if (alreadyMarked) {
-      alert("⚠️ Attendance all ready save!");
-      return;
-    }
-
     try {
       const workerRef = doc(db, "workers", worker.id);
       await updateDoc(workerRef, {
@@ -58,20 +45,23 @@ export default function WorkerDashboard() {
         }),
         status: "Online"
       });
-      alert("✅ Attendance sucessfull!");
+      alert("✅ Attendance successful!");
     } catch (error) {
-      alert("Error: Attendance not update.");
+      alert("Error saving attendance.");
     }
   };
 
-  // Loading Screen Styles
   if (loading) return (
-    <div style={{background: '#764ba2', height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff'}}>
-       <h3>Loading Dashboard...</h3>
+    <div style={{background: '#764ba2', height: '100vh', color: '#fff', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+      <h3>Loading...</h3>
     </div>
   );
-
-  if (!worker) return <div style={{background: '#764ba2', height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff'}}>Worker Record Not Found!</div>;
+  
+  if (!worker) return (
+    <div style={{background: '#764ba2', height: '100vh', color: '#fff', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+      Worker Record Not Found!
+    </div>
+  );
 
   return (
     <div style={styles.dashboardLayout}>
@@ -79,65 +69,23 @@ export default function WorkerDashboard() {
         <h2 style={styles.headerTitle}>MD JAMIL ANSARI</h2>
         <p style={styles.headerSub}>Worker Dashboard Control</p>
       </header>
-
+      <div style={styles.contentWrapper}><IDCard worker={worker} /></div>
       <div style={styles.contentWrapper}>
-        <IDCard worker={worker} />
+        <AttendanceControl onMarkAttendance={handleMarkAttendance} attendanceHistory={worker.approvedAttendance} />
       </div>
-
+      <div style={styles.contentWrapper}><FinanceLedger worker={worker} /></div>
       <div style={styles.contentWrapper}>
-        <AttendanceControl 
-          onMarkAttendance={handleMarkAttendance} 
-          attendanceHistory={worker.approvedAttendance} 
-        />
+        <button onClick={() => downloadWorkerHistory(worker)} style={styles.glassPdfBtn}>📥 Download PDF</button>
       </div>
-
-      <div style={styles.contentWrapper}>
-        <FinanceLedger worker={worker} />
-      </div>
-
-      <div style={styles.contentWrapper}>
-        <button onClick={() => downloadWorkerHistory(worker)} style={styles.glassPdfBtn}>
-          📥 Download Full Record (PDF)
-        </button>
-      </div>
-
-      <footer style={{color: 'rgba(255,255,255,0.5)', fontSize: '10px', marginTop: '20px'}}>
-        © 2026 Jamil Contractor System | Jamshedpur
-      </footer>
     </div>
   );
 }
 
 const styles = {
-  dashboardLayout: {
-    padding: '20px 15px',
-    background: 'radial-gradient(circle at top left, #8e44ad, #3498db)', 
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '15px'
-  },
-  glassHeader: {
-    width: '100%',
-    maxWidth: '400px',
-    padding: '20px',
-    background: 'rgba(255, 255, 255, 0.1)', 
-    borderRadius: '20px',
-    textAlign: 'center',
-    border: '1px solid rgba(255, 255, 255, 0.2)'
-  },
+  dashboardLayout: { padding: '20px 15px', background: 'radial-gradient(circle at top left, #8e44ad, #3498db)', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' },
+  glassHeader: { width: '100%', maxWidth: '400px', padding: '20px', background: 'rgba(255,255,255,0.1)', borderRadius: '20px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.2)' },
   headerTitle: { margin: 0, color: '#fff', fontSize: '20px' },
   headerSub: { margin: '5px 0 0', color: 'rgba(255,255,255,0.7)', fontSize: '11px' },
   contentWrapper: { width: '100%', maxWidth: '400px' },
-  glassPdfBtn: {
-    width: '100%',
-    padding: '18px',
-    borderRadius: '20px',
-    background: 'rgba(255, 255, 255, 0.15)',
-    color: '#fff',
-    fontWeight: 'bold',
-    border: '1px solid rgba(255, 255, 255, 0.3)',
-    cursor: 'pointer'
-  }
+  glassPdfBtn: { width: '100%', padding: '18px', borderRadius: '20px', background: 'rgba(255,255,255,0.15)', color: '#fff', fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.3)', cursor: 'pointer' }
 };
