@@ -1,15 +1,23 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, arrayUnion } from 'firebase/firestore';
+
+// Saare Folders/Components Import Karein
+import IDCard from '../components/IDCard';
+import FinanceLedger from '../components/FinanceLedger';
+import AttendanceBox from '../components/AttendanceBox';
+import { compressWorkerImage } from '../utils/imageCompressor'; // Compression Folder
+import { downloadWorkerHistory } from '../utils/pdfGenerator';    // PDF Folder
 
 export default function WorkerDashboard() {
   const [worker, setWorker] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const workerID = "1234"; // Aapka hardcoded PIN
-    const unsub = onSnapshot(doc(db, "workers", workerID), (snap) => {
+    // 1234 ID ka data load karein
+    const id = "1234"; 
+    const unsub = onSnapshot(doc(db, "workers", id), (snap) => {
       if (snap.exists()) {
         setWorker({ id: snap.id, ...snap.data() });
       }
@@ -18,47 +26,85 @@ export default function WorkerDashboard() {
     return () => unsub();
   }, []);
 
-  if (loading) return <div style={styles.loading}>Loading Worker Data...</div>;
+  // Attendance Mark karne ka Logic with Compression
+  const handleAttendance = async (rawFile) => {
+    if (!rawFile) return;
 
-  if (!worker) return (
-    <div style={styles.error}>
-      <h3>Oops! Worker Not Found</h3>
-      <p>ID '1234' database mein nahi hai.</p>
-      <p>Pehle Admin Panel se register karein.</p>
-    </div>
-  );
+    // 1. Image Compress Folder Logic
+    const compressedBase64 = await compressWorkerImage(rawFile);
+    
+    if (compressedBase64) {
+      const workerRef = doc(db, "workers", worker.id);
+      const now = new Date();
+
+      // 2. Database Update Logic
+      await updateDoc(workerRef, {
+        pendingAttendance: arrayUnion({
+          date: now.toLocaleDateString(),
+          time: now.toLocaleTimeString(),
+          photo: compressedBase64,
+          status: "Pending Approval"
+        })
+      });
+
+      alert("Photo compressed aur attendance bhej di gayi hai!");
+    }
+  };
+
+  if (loading) return <div style={{textAlign:'center', padding:'50px', color:'#fff'}}>Connecting to Jamil Contractor DB...</div>;
 
   return (
-    <div style={styles.container}>
-      <div style={styles.idCard}>
-        <div style={styles.header}>
-          <span>JC</span>
-          <p>JAMIL CONTRACTOR</p>
-        </div>
-        <div style={styles.body}>
-          <h2>{worker.name}</h2>
-          <p>ID: {worker.id}</p>
-          <div style={styles.ledger}>
-            <p>Advance: ₹{worker.totalAdvance || 0}</p>
-            <p>Baki: ₹{(worker.totalAdvance || 0) - (worker.totalDeducted || 0)}</p>
-          </div>
-        </div>
-      </div>
-      <div style={styles.attendanceBox}>
-        <button style={styles.btn}>📸 Mark Present</button>
-      </div>
+    <div style={styles.dashboardLayout}>
+      {/* 🏛️ App Header */}
+      <header style={{textAlign:'center', color:'#fff', marginBottom:'10px'}}>
+        <h2 style={{margin:0}}>MD JAMIL ANSARI</h2>
+        <p style={{fontSize:'12px', opacity:0.8}}>Worker Control Panel</p>
+      </header>
+
+      {/* 🪪 ID Card Component */}
+      <IDCard worker={worker} />
+
+      {/* 💰 Finance Component */}
+      <FinanceLedger worker={worker} />
+
+      {/* 📸 Attendance Component (Image Compression Included) */}
+      <AttendanceBox onMark={handleAttendance} />
+
+      {/* 📄 PDF History Folder */}
+      <button 
+        onClick={() => downloadWorkerHistory(worker)} 
+        style={styles.pdfBtn}
+      >
+        📥 Download My Full Record (PDF)
+      </button>
+
+      <footer style={{textAlign:'center', color:'#fff', fontSize:'10px', marginTop:'20px'}}>
+        © 2026 Jamil Contractor System
+      </footer>
     </div>
   );
 }
 
 const styles = {
-  container: { padding: '20px', background: 'linear-gradient(135deg, #764ba2, #667eea)', minHeight: '100vh' },
-  loading: { display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center', color: '#fff', fontSize: '20px' },
-  error: { padding: '50px', textAlign: 'center', color: 'red', background: '#fff', minHeight: '100vh' },
-  idCard: { background: '#fff', borderRadius: '15px', overflow: 'hidden', boxShadow: '0 10px 20px rgba(0,0,0,0.2)' },
-  header: { background: '#764ba2', color: '#fff', padding: '15px', display: 'flex', justifyContent: 'space-between' },
-  body: { padding: '20px', textAlign: 'center' },
-  ledger: { background: '#f8f9fa', padding: '10px', borderRadius: '8px', marginTop: '10px' },
-  attendanceBox: { marginTop: '20px', textAlign: 'center' },
-  btn: { width: '100%', padding: '15px', background: '#22c55e', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold' }
+  dashboardLayout: {
+    padding: '20px',
+    background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+    minHeight: '100vh',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px'
+  },
+  pdfBtn: {
+    width: '100%',
+    maxWidth: '360px',
+    margin: '10px auto',
+    padding: '15px',
+    borderRadius: '50px',
+    border: 'none',
+    background: '#fff',
+    color: '#764ba2',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    boxShadow: '0 5px 15px rgba(0,0,0,0.2)'
+  }
 };
