@@ -1,38 +1,42 @@
 "use client";
 
+// 🛠️ FIX: Static export ke liye ye function zaroori hai
+// Agar aapke paas koi default IDs nahi hain, toh khali array return karein
+export function generateStaticParams() {
+  return []; 
+}
+
+// Ye line Vercel ko batayegi ki ise runtime par check kare
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot, updateDoc, arrayUnion } from 'firebase/firestore';
 import { useParams } from 'next/navigation';
 
-// ✅ Relative Paths (Folder ke hisaab se sahi rasta)
+// Relative Paths (Safe for builds)
 import IDCard from '../../components/IDCard';
 import FinanceLedger from '../../components/FinanceLedger';
 import AttendanceControl from '../../components/AttendanceControl';
 import { downloadWorkerHistory } from '../../utils/pdfGenerator';
 
-// ✅ Ye line Vercel build error (generateStaticParams) ko fix karegi
-export const dynamic = 'force-dynamic';
-
 export default function WorkerDashboard() {
-  const params = useParams(); 
+  const params = useParams();
   const [worker, setWorker] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const workerId = params.id; 
-
     if (!workerId) {
       setLoading(false);
       return;
     }
 
-    // Real-time sync specific worker ke liye
     const unsub = onSnapshot(doc(db, "workers", workerId), (snap) => {
       if (snap.exists()) {
         setWorker({ id: snap.id, ...snap.data() });
       } else {
-        console.error("Worker data not found in Firebase!");
+        console.error("Worker not found!");
       }
       setLoading(false);
     });
@@ -42,7 +46,6 @@ export default function WorkerDashboard() {
 
   const handleMarkAttendance = async () => {
     if (!worker) return;
-
     const today = new Date().toLocaleDateString('en-GB');
     const alreadyMarked = worker.approvedAttendance?.some(entry => entry.date === today);
     
@@ -63,7 +66,7 @@ export default function WorkerDashboard() {
       });
       alert("✅ Haziri lag gayi!");
     } catch (error) {
-      alert("Error: Database update failed.");
+      alert("Error updating attendance.");
     }
   };
 
@@ -96,7 +99,6 @@ export default function WorkerDashboard() {
         />
       </div>
 
-      {/* 💰 Finance Ledger Section */}
       <div style={styles.contentWrapper}>
         <FinanceLedger worker={worker} />
       </div>
