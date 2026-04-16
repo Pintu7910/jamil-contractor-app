@@ -1,14 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 1. APK banane ke liye static export zaroori hai
-  output: 'export', 
+  // 🛠️ SMART FIX: 
+  // Agar Vercel par build ho raha hai toh 'export' nahi karega, 
+  // lekin jab aap local APK banayengi tab 'export' kaam karega.
+  output: process.env.VERCEL ? undefined : 'export', 
 
-  // 2. Images ko optimize hone se rokta hai (Capacitor/APK mein optimization kaam nahi karta)
   images: {
     unoptimized: true,
   },
 
-  // 3. Agar aap trailing slashes chahte hain toh ise true rakhein (Optional)
   trailingSlash: true,
 };
 
