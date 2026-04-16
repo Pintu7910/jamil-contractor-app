@@ -4,11 +4,11 @@ import { db } from '@/lib/firebase';
 import { doc, onSnapshot, updateDoc, arrayUnion } from 'firebase/firestore';
 import { useParams } from 'next/navigation';
 
-// Sahi Relative Paths
-import IDCard from '../../components/IDCard';
-import FinanceLedger from '../../components/FinanceLedger';
-import AttendanceControl from '../../components/AttendanceControl';
-import { downloadWorkerHistory } from '../../utils/pdfGenerator';
+// ✅ Fix: Next.js standard paths use karein
+import IDCard from '@/components/IDCard';
+import FinanceLedger from '@/components/FinanceLedger';
+import AttendanceControl from '@/components/AttendanceControl';
+import { downloadWorkerHistory } from '@/utils/pdfGenerator';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +18,7 @@ export default function WorkerDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // 🗑️ "1234" hat chuka hai, ab ye URL se ID lega
     const workerId = params.id; 
 
     if (!workerId) {
@@ -29,7 +30,7 @@ export default function WorkerDashboard() {
       if (snap.exists()) {
         setWorker({ id: snap.id, ...snap.data() });
       } else {
-        console.error("Worker not found!");
+        console.error("Worker record not found in database.");
       }
       setLoading(false);
     });
@@ -59,7 +60,7 @@ export default function WorkerDashboard() {
       });
       alert("✅ Haziri lag gayi!");
     } catch (error) {
-      alert("Error: Attendance record update nahi ho saka.");
+      alert("Error: Database update failed.");
     }
   };
 
