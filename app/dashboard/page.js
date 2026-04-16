@@ -5,7 +5,7 @@ import { doc, onSnapshot, updateDoc, arrayUnion } from 'firebase/firestore';
 
 // Components Import
 import IDCard from '../components/IDCard';
-import FinanceLedger from '../components/FinanceLedger';
+import FinanceLedger from '../components/FinanceLedger'; // Isme humne change kiya hai
 import AttendanceControl from '../components/AttendanceControl';
 import { downloadWorkerHistory } from '../utils/pdfGenerator';
 
@@ -14,6 +14,7 @@ export default function WorkerDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Sadiya, yahan ID ko dynamic rakhein ya login se connect karein
     const id = "1234"; 
     const unsub = onSnapshot(doc(db, "workers", id), (snap) => {
       if (snap.exists()) {
@@ -39,7 +40,7 @@ export default function WorkerDashboard() {
         approvedAttendance: arrayUnion({
           date: today,
           time: new Date().toLocaleTimeString(),
-          status: "Present"
+          status: "Approved" // Humne direct approved rakha hai simple rakhne ke liye
         }),
         status: "Online"
       });
@@ -60,13 +61,11 @@ export default function WorkerDashboard() {
 
   return (
     <div style={styles.dashboardLayout}>
-      {/* 🔮 Glassy Header */}
       <header style={styles.glassHeader}>
         <h2 style={styles.headerTitle}>MD JAMIL ANSARI</h2>
         <p style={styles.headerSub}>Worker Dashboard Control</p>
       </header>
 
-      {/* Main Content Sections */}
       <div style={styles.contentWrapper}>
         <IDCard worker={worker} />
       </div>
@@ -78,6 +77,7 @@ export default function WorkerDashboard() {
         />
       </div>
 
+      {/* 💰 Finance Ledger: Ab ye sirf Wages aur Bakaya dikhayega */}
       <div style={styles.contentWrapper}>
         <FinanceLedger worker={worker} />
       </div>
@@ -95,11 +95,10 @@ export default function WorkerDashboard() {
   );
 }
 
-// 💎 Glassmorphism Style Configuration
 const styles = {
   dashboardLayout: {
     padding: '20px 15px',
-    background: 'radial-gradient(circle at top left, #8e44ad, #3498db)', // Vibrant base for glass effect
+    background: 'radial-gradient(circle at top left, #8e44ad, #3498db)', 
     minHeight: '100vh',
     display: 'flex',
     flexDirection: 'column',
@@ -127,9 +126,9 @@ const styles = {
     width: '100%',
     maxWidth: '400px',
     padding: '20px',
-    background: 'rgba(255, 255, 255, 0.1)', // Frosty effect
+    background: 'rgba(255, 255, 255, 0.1)', 
     borderRadius: '20px',
-    backdropFilter: 'blur(15px)', // Blurring the background
+    backdropFilter: 'blur(15px)', 
     border: '1px solid rgba(255, 255, 255, 0.2)',
     textAlign: 'center',
     boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.2)'
