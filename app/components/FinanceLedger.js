@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
 
 export default function FinanceLedger({ worker }) {
-  const [open, setOpen] = useState(null); // 'adv' or 'ded'
+  const [open, setOpen] = useState(null); 
+  
+  // Wages logic
+  const dailyWage = worker?.dailyWage || 0; 
+  const totalDays = worker?.approvedAttendance?.length || 0; 
+  const totalEarning = dailyWage * totalDays; 
   
   const advance = worker?.totalAdvance || 0;
   const deducted = worker?.totalDeducted || 0;
@@ -19,7 +24,7 @@ export default function FinanceLedger({ worker }) {
       alignItems: 'center',
       boxShadow: '0 8px 20px rgba(0,0,0,0.1)',
       cursor: 'pointer',
-      minHeight: '80px', // Unchai badha di gayi hai
+      minHeight: '85px', 
       border: '1px solid #f0f0f0',
       transition: 'all 0.3s ease'
     },
@@ -43,7 +48,17 @@ export default function FinanceLedger({ worker }) {
     <div style={styles.container}>
       <p style={styles.title}>💰 AAPKA HISAB-KITAB</p>
       
-      {/* 1. Total Advance Card */}
+      {/* 1. Wages Card (Naya Function) */}
+      <div style={{...styles.card, borderLeft: '6px solid #3498db'}}>
+        <div style={{...styles.iconCircle, background: '#ebf5fb', color: '#3498db'}}>🏗️</div>
+        <div style={styles.labelGroup}>
+          <span style={styles.mainLabel}>Kul Kamayi (Wages)</span>
+          <span style={styles.subLabel}>₹{dailyWage}/day × {totalDays} Din</span>
+        </div>
+        <span style={{...styles.amount, color: '#3498db'}}>₹{totalEarning}</span>
+      </div>
+
+      {/* 2. Total Advance Card */}
       <div 
         style={{...styles.card, borderLeft: '6px solid #ef4444'}} 
         onClick={() => setOpen(open === 'adv' ? null : 'adv')}
@@ -51,21 +66,21 @@ export default function FinanceLedger({ worker }) {
         <div style={{...styles.iconCircle, background: '#fee2e2', color: '#ef4444'}}>💵</div>
         <div style={styles.labelGroup}>
           <span style={styles.mainLabel}>Total Advance</span>
-          <span style={styles.subLabel}>{open === 'adv' ? 'Click to hide details' : 'Click to see dates'}</span>
+          <span style={styles.subLabel}>{open === 'adv' ? 'Hide details' : 'See dates'}</span>
         </div>
         <span style={{...styles.amount, color: '#ef4444'}}>₹{advance}</span>
       </div>
       {open === 'adv' && (
-        <div style={{background: 'rgba(255,255,255,0.9)', padding: '15px', borderRadius: '15px', marginTop: '-10px', fontSize: '13px'}}>
+        <div style={{background: 'rgba(255,255,255,0.9)', padding: '15px', borderRadius: '15px', marginTop: '-10px', fontSize: '13px', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)'}}>
           {worker?.advanceHistory?.map((h, i) => (
-            <div key={i} style={{display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #eee'}}>
+            <div key={i} style={{display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee'}}>
               <span>{h.date}</span> <b>₹{h.amount}</b>
             </div>
-          )) || "No record found"}
+          )) || <p style={{color:'#999', margin:0}}>No history found</p>}
         </div>
       )}
 
-      {/* 2. Katwa Diya Card */}
+      {/* 3. Katwa Diya Card */}
       <div 
         style={{...styles.card, borderLeft: '6px solid #22c55e'}}
         onClick={() => setOpen(open === 'ded' ? null : 'ded')}
@@ -78,16 +93,16 @@ export default function FinanceLedger({ worker }) {
         <span style={{...styles.amount, color: '#22c55e'}}>₹{deducted}</span>
       </div>
       {open === 'ded' && (
-        <div style={{background: 'rgba(255,255,255,0.9)', padding: '15px', borderRadius: '15px', marginTop: '-10px', fontSize: '13px'}}>
+        <div style={{background: 'rgba(255,255,255,0.9)', padding: '15px', borderRadius: '15px', marginTop: '-10px', fontSize: '13px', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)'}}>
           {worker?.deductionHistory?.map((h, i) => (
-            <div key={i} style={{display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #eee'}}>
+            <div key={i} style={{display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee'}}>
               <span>{h.date}</span> <b>- ₹{h.amount}</b>
             </div>
-          )) || "No record found"}
+          )) || <p style={{color:'#999', margin:0}}>No record</p>}
         </div>
       )}
 
-      {/* 3. Bakaya (Pending) - High Contrast Card */}
+      {/* 4. Bakaya (Pending) Card */}
       <div style={{...styles.card, background: '#1a1a1a', border: 'none'}}>
         <div style={{...styles.iconCircle, background: '#333', color: '#fff'}}>⏳</div>
         <div style={styles.labelGroup}>
