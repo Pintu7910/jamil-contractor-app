@@ -4,19 +4,19 @@ import { db } from '@/lib/firebase';
 import { doc, onSnapshot, updateDoc, arrayUnion } from 'firebase/firestore';
 import { useParams } from 'next/navigation';
 
-// ✅ Imports ko sahi kiya taaki build fail na ho
-import IDCard from '@/components/IDCard';
-import FinanceLedger from '@/components/FinanceLedger';
-import AttendanceControl from '@/components/AttendanceControl';
-import { downloadWorkerHistory } from '@/utils/pdfGenerator';
+// ✅ Paths ko double-back (../../) kiya gaya hai taaki build error khatam ho jaye
+import IDCard from '../../components/IDCard';
+import FinanceLedger from '../../components/FinanceLedger';
+import AttendanceControl from '../../components/AttendanceControl';
+import { downloadWorkerHistory } from '../../utils/pdfGenerator';
 
 export default function WorkerDashboard() {
-  const params = useParams(); // URL se worker ki real ID lega
+  const params = useParams(); // URL se real worker ID lene ke liye
   const [worker, setWorker] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // URL se ID nikalna (jaise 4168)
+    // URL se ID nikalna (Jaise localhost:3000/worker/4168 mein 4168 legi)
     const workerId = params.id; 
 
     if (!workerId) {
@@ -24,12 +24,12 @@ export default function WorkerDashboard() {
       return;
     }
 
-    // Real-time data sync for specific worker ID
+    // Real-time data sync specific worker ID ke liye
     const unsub = onSnapshot(doc(db, "workers", workerId), (snap) => {
       if (snap.exists()) {
         setWorker({ id: snap.id, ...snap.data() });
       } else {
-        console.error("Database mein is ID ka worker nahi mila!");
+        console.error("Worker nahi mila database mein!");
       }
       setLoading(false);
     });
@@ -60,7 +60,7 @@ export default function WorkerDashboard() {
       });
       alert("✅ Haziri lag gayi!");
     } catch (error) {
-      alert("Error: Attendance lagane mein issue aaya.");
+      alert("Error: Attendance record update nahi ho saka.");
     }
   };
 
@@ -82,10 +82,12 @@ export default function WorkerDashboard() {
         <p style={styles.headerSub}>Worker Dashboard Control</p>
       </header>
 
+      {/* Worker Card Section */}
       <div style={styles.contentWrapper}>
         <IDCard worker={worker} />
       </div>
 
+      {/* Attendance Control Section */}
       <div style={styles.contentWrapper}>
         <AttendanceControl 
           onMarkAttendance={handleMarkAttendance} 
@@ -93,7 +95,7 @@ export default function WorkerDashboard() {
         />
       </div>
 
-      {/* 💰 Finance Section: Wages aur Bakaya dikhayega */}
+      {/* 💰 Finance Section: Wages aur Bakaya */}
       <div style={styles.contentWrapper}>
         <FinanceLedger worker={worker} />
       </div>
