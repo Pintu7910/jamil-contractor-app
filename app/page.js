@@ -1,15 +1,13 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { db } from '../lib/firebase'; 
-import { doc, getDoc, onSnapshot, updateDoc, arrayUnion } from 'firebase/firestore';
+import { db } from '../lib/firebase'; // Ye bahar hai isliye ../ sahi hai
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 
-// ✅ Components ka rasta sahi hai (./components)
+// ✅ Fix: Saare folders 'app' ke andar hain, isliye path './' se shuru hoga
 import IDCard from './components/IDCard';
 import FinanceLedger from './components/FinanceLedger';
 import AttendanceControl from './components/AttendanceControl';
-
-// 🛠️ FIX: 'utils' folder 'app' ke bahar hai, isliye '../' use hoga
-import { downloadWorkerHistory } from '../utils/pdfGenerator'; 
+import { downloadWorkerHistory } from './utils/pdfGenerator'; 
 
 export default function MainApp() {
   const [pin, setPin] = useState('');
@@ -36,7 +34,7 @@ export default function MainApp() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (pin.length < 4) return alert("PIN daalein");
+    if (pin.length < 4) return alert("Sahi PIN daalein");
     setLoading(true);
     try {
       const docSnap = await getDoc(doc(db, "workers", pin));
@@ -53,10 +51,18 @@ export default function MainApp() {
       <div style={styles.loginContainer}>
         <div style={styles.glassCard}>
           <div style={styles.logo}>MJ</div>
-          <h2>MD JAMIL ANSARI</h2>
-          <p>Workforce Management</p>
-          <input type="number" placeholder="Enter PIN" value={pin} onChange={e => setPin(e.target.value.slice(0,6))} style={styles.input} />
-          <button onClick={handleLogin} style={styles.btn}>{loading ? "Checking..." : "VERIFY & ENTER"}</button>
+          <h2 style={{color: '#fff'}}>MD JAMIL ANSARI</h2>
+          <p style={{color: 'rgba(255,255,255,0.7)'}}>Workforce Management</p>
+          <input 
+            type="number" 
+            placeholder="Enter PIN" 
+            value={pin} 
+            onChange={e => setPin(e.target.value.slice(0,6))} 
+            style={styles.input} 
+          />
+          <button onClick={handleLogin} style={styles.btn}>
+            {loading ? "Checking..." : "VERIFY & ENTER"}
+          </button>
         </div>
       </div>
     );
@@ -75,10 +81,10 @@ export default function MainApp() {
 
 const styles = {
   loginContainer: { background: 'linear-gradient(135deg, #667eea, #764ba2)', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' },
-  glassCard: { background: 'rgba(255,255,255,0.2)', padding: '40px', borderRadius: '25px', textAlign: 'center', color: 'white', width: '90%', maxWidth: '400px' },
+  glassCard: { background: 'rgba(255,255,255,0.2)', padding: '40px', borderRadius: '25px', textAlign: 'center', color: 'white', width: '90%', maxWidth: '400px', border: '1px solid rgba(255,255,255,0.3)' },
   input: { width: '100%', padding: '15px', borderRadius: '10px', border: 'none', marginBottom: '20px', textAlign: 'center', fontSize: '20px', color: '#000' },
   btn: { width: '100%', padding: '15px', borderRadius: '10px', border: 'none', background: '#fff', color: '#667eea', fontWeight: 'bold', cursor: 'pointer' },
-  logo: { width: '60px', height: '60px', background: 'rgba(255,255,255,0.3)', borderRadius: '50%', margin: '0 auto 10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' },
+  logo: { width: '60px', height: '60px', background: 'rgba(255,255,255,0.3)', borderRadius: '50%', margin: '0 auto 10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: '#fff' },
   dashboardLayout: { padding: '20px', background: 'linear-gradient(#8e44ad, #3498db)', minHeight: '100vh', display: 'flex', flexDirection: 'column', gap: '15px', alignItems: 'center' },
   header: { color: '#fff', marginBottom: '10px' },
   box: { width: '100%', maxWidth: '400px' },
