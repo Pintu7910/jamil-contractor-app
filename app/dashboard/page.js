@@ -7,15 +7,43 @@ import 'jspdf-autotable';
 
 export default function WorkerDashboard() {
   const [worker, setWorker] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [image, setImage] = useState(null);
 
   useEffect(() => {
+    // 1234 hardcoded PIN for initial entry as per your requirement
     const id = localStorage.getItem("workerID") || "1234"; 
+    
     const unsub = onSnapshot(doc(db, "workers", id), (docSnap) => {
-      if (docSnap.exists()) setWorker({ id: docSnap.id, ...docSnap.data() });
+      if (docSnap.exists()) {
+        setWorker({ id: docSnap.id, ...docSnap.data() });
+      } else {
+        console.error("Worker data not found!");
+      }
+      setLoading(false); // Data milte hi loading khatam
     });
+
     return () => unsub();
   }, []);
+
+  // Blank screen se bachne ke liye loading spinner
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center', background: '#764ba2', color: '#fff' }}>
+        <h2>Loading Worker Data...</h2>
+      </div>
+    );
+  }
+
+  // Agar phir bhi worker data na mile toh login par wapas bhejien
+  if (!worker) {
+    return (
+      <div style={{ textAlign: 'center', marginTop: '50px' }}>
+        <p>Worker data not found. Please login again.</p>
+        <button onClick={() => window.location.href = "/"}>Back to Login</button>
+      </div>
+    );
+  }
 
   const handleMarkPresent = async () => {
     if (!image) return alert("Pehle Photo Capture karein!");
@@ -31,68 +59,54 @@ export default function WorkerDashboard() {
       })
     });
     setImage(null);
-    alert("Attendance Admin ko bhej di gayi hai.");
+    alert("Attendance sent to Admin!");
   };
-
-  const downloadPDF = () => {
-    const doc = new jsPDF();
-    doc.text(`JAMIL CONTRACTOR - Worker Report`, 10, 10);
-    doc.text(`Worker: ${worker.name} (ID: ${worker.id})`, 10, 20);
-    doc.autoTable({
-      startY: 30,
-      head: [['Total Advance', 'Total Cut', 'Balance']],
-      body: [[`Rs.${worker.totalAdvance || 0}`, `Rs.${worker.totalDeducted || 0}`, `Rs.${(worker.totalAdvance || 0) - (worker.totalDeducted || 0)}`]],
-    });
-    doc.save(`${worker.name}_History.pdf`);
-  };
-
-  if (!worker) return <div style={{color:'#fff', textAlign:'center', marginTop:'50px'}}>Loading...</div>;
 
   return (
     <div style={styles.container}>
-      {/* ID CARD */}
+      <header style={{color: '#fff', textAlign: 'center'}}>
+        <h1 style={{margin:0}}>MD JAMIL ANSARI</h1>
+        <p>Worker Dashboard</p>
+      </header>
+
+      {/* 🪪 ID CARD SECTION */}
       <div style={styles.idCard}>
         <div style={styles.cardHeader}>
           <span>JC</span>
           <div style={{textAlign:'right'}}>
             <h4 style={{margin:0}}>JAMIL CONTRACTOR</h4>
-            <p style={{margin:0, fontSize:'10px'}}>WORKER ID CARD</p>
           </div>
         </div>
         <div style={styles.details}>
           <h2 style={{margin:0}}>{worker.name}</h2>
-          <p style={{color:'#888'}}>ID NO: {worker.id}</p>
+          <p>ID: {worker.id}</p>
           <div style={styles.financeGrid}>
             <div style={styles.finBox}><span>Advance</span><br/><b>₹{worker.totalAdvance || 0}</b></div>
-            <div style={styles.finBox}><span>Kataya</span><br/><b>₹{worker.totalDeducted || 0}</b></div>
             <div style={styles.finBox}><span>Baki</span><br/><b>₹{(worker.totalAdvance || 0) - (worker.totalDeducted || 0)}</b></div>
           </div>
         </div>
       </div>
 
+      {/* 📸 ATTENDANCE ACTION */}
       <div style={styles.actionCard}>
-        <h3>Daily Attendance</h3>
+        <h3>Attendance Approval</h3>
         <input type="file" accept="image/*" capture="camera" onChange={(e) => {
           const reader = new FileReader();
           reader.onload = (ev) => setImage(ev.target.result);
           reader.readAsDataURL(e.target.files[0]);
-        }} style={{marginBottom:'10px'}} />
+        }} />
         <button onClick={handleMarkPresent} style={styles.presentBtn}>✅ Mark Present</button>
       </div>
-
-      <button onClick={downloadPDF} style={styles.pdfBtn}>📥 Download Full History PDF</button>
     </div>
   );
 }
 
 const styles = {
-  container: { padding: '20px', background: 'linear-gradient(135deg, #764ba2, #667eea)', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' },
-  idCard: { background: '#fff', borderRadius: '20px', width: '100%', maxWidth: '350px', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' },
-  cardHeader: { background: '#764ba2', color: '#fff', padding: '15px', display: 'flex', justifyContent: 'space-between' },
+  container: { padding: '20px', background: 'linear-gradient(135deg, #764ba2, #667eea)', minHeight: '100vh', display: 'flex', flexDirection: 'column', gap: '20px' },
+  idCard: { background: '#fff', borderRadius: '15px', overflow: 'hidden', boxShadow: '0 5px 15px rgba(0,0,0,0.2)' },
+  cardHeader: { background: '#764ba2', color: '#fff', padding: '10px 15px', display: 'flex', justifyContent: 'space-between' },
   details: { padding: '20px', textAlign: 'center' },
-  financeGrid: { display: 'flex', justifyContent: 'space-around', marginTop: '15px', background: '#f8f9fa', padding: '15px', borderRadius: '12px' },
-  finBox: { fontSize: '12px', color: '#333' },
-  actionCard: { background: '#fff', padding: '20px', borderRadius: '20px', width: '100%', maxWidth: '350px', textAlign: 'center' },
-  presentBtn: { width: '100%', padding: '12px', background: '#22c55e', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' },
-  pdfBtn: { background: '#fff', color: '#764ba2', padding: '12px 25px', borderRadius: '50px', border: 'none', fontWeight: 'bold', cursor: 'pointer' }
+  financeGrid: { display: 'flex', justifyContent: 'space-around', marginTop: '10px', background: '#f0f0f0', padding: '10px', borderRadius: '8px' },
+  actionCard: { background: '#fff', padding: '20px', borderRadius: '15px', textAlign: 'center' },
+  presentBtn: { width: '100%', padding: '10px', background: '#22c55e', color: '#fff', border: 'none', borderRadius: '5px', marginTop: '10px', fontWeight: 'bold' }
 };
