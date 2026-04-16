@@ -4,7 +4,7 @@ import { db } from '@/lib/firebase';
 import { doc, onSnapshot, updateDoc, arrayUnion } from 'firebase/firestore';
 import { useParams } from 'next/navigation';
 
-// ✅ Fix: Next.js standard paths (@/) use karein taaki Vercel dhoond sake
+// ✅ Sahi Paths (@/ use karne se Vercel error nahi dega)
 import IDCard from '@/components/IDCard';
 import FinanceLedger from '@/components/FinanceLedger';
 import AttendanceControl from '@/components/AttendanceControl';
@@ -18,7 +18,7 @@ export default function WorkerDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 🗑️ Hardcoded "1234" khatam! Ab ye URL ki ID (jaise 4168) use karega.
+    // 🗑️ "1234" hat gaya hai. Ab ye URL ki ID (jaise 4168) use karega.
     const workerId = params.id; 
 
     if (!workerId) {
@@ -30,7 +30,7 @@ export default function WorkerDashboard() {
       if (snap.exists()) {
         setWorker({ id: snap.id, ...snap.data() });
       } else {
-        console.error("Database mein worker nahi mila!");
+        console.error("Database mein ye worker nahi mila!");
       }
       setLoading(false);
     });
@@ -60,25 +60,84 @@ export default function WorkerDashboard() {
       });
       alert("✅ Haziri lag gayi!");
     } catch (error) {
-      alert("Error: Attendance record update nahi ho saka.");
+      alert("Error: Attendance update nahi ho saki.");
     }
   };
 
-  if (loading) return <div style={{background: '#764ba2', height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff'}}>Loading Dashboard...</div>;
-  if (!worker) return <div style={{background: '#764ba2', height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff'}}>Worker Not Found!</div>;
+  // Loading Screen Styles
+  if (loading) return (
+    <div style={{background: '#764ba2', height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff'}}>
+       <h3>Loading Dashboard...</h3>
+    </div>
+  );
+
+  if (!worker) return <div style={{background: '#764ba2', height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff'}}>Worker Record Not Found!</div>;
 
   return (
-    <div style={{padding: '20px 15px', background: 'radial-gradient(circle at top left, #8e44ad, #3498db)', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px'}}>
-      <header style={{width: '100%', maxWidth: '400px', padding: '20px', background: 'rgba(255,255,255,0.1)', borderRadius: '20px', textAlign: 'center'}}>
-        <h2 style={{margin: 0, color: '#fff'}}>MD JAMIL ANSARI</h2>
+    <div style={styles.dashboardLayout}>
+      <header style={styles.glassHeader}>
+        <h2 style={styles.headerTitle}>MD JAMIL ANSARI</h2>
+        <p style={styles.headerSub}>Worker Dashboard Control</p>
       </header>
 
-      <div style={{width: '100%', maxWidth: '400px'}}><IDCard worker={worker} /></div>
-      <div style={{width: '100%', maxWidth: '400px'}}><AttendanceControl onMarkAttendance={handleMarkAttendance} attendanceHistory={worker.approvedAttendance} /></div>
-      <div style={{width: '100%', maxWidth: '400px'}}><FinanceLedger worker={worker} /></div>
-      <div style={{width: '100%', maxWidth: '400px'}}>
-        <button onClick={() => downloadWorkerHistory(worker)} style={{width: '100%', padding: '18px', borderRadius: '20px', background: 'rgba(255,255,255,0.15)', color: '#fff', fontWeight: 'bold'}}>📥 Download Full Record (PDF)</button>
+      <div style={styles.contentWrapper}>
+        <IDCard worker={worker} />
       </div>
+
+      <div style={styles.contentWrapper}>
+        <AttendanceControl 
+          onMarkAttendance={handleMarkAttendance} 
+          attendanceHistory={worker.approvedAttendance} 
+        />
+      </div>
+
+      <div style={styles.contentWrapper}>
+        <FinanceLedger worker={worker} />
+      </div>
+
+      <div style={styles.contentWrapper}>
+        <button onClick={() => downloadWorkerHistory(worker)} style={styles.glassPdfBtn}>
+          📥 Download Full Record (PDF)
+        </button>
+      </div>
+
+      <footer style={{color: 'rgba(255,255,255,0.5)', fontSize: '10px', marginTop: '20px'}}>
+        © 2026 Jamil Contractor System | Jamshedpur
+      </footer>
     </div>
   );
 }
+
+const styles = {
+  dashboardLayout: {
+    padding: '20px 15px',
+    background: 'radial-gradient(circle at top left, #8e44ad, #3498db)', 
+    minHeight: '100vh',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '15px'
+  },
+  glassHeader: {
+    width: '100%',
+    maxWidth: '400px',
+    padding: '20px',
+    background: 'rgba(255, 255, 255, 0.1)', 
+    borderRadius: '20px',
+    textAlign: 'center',
+    border: '1px solid rgba(255, 255, 255, 0.2)'
+  },
+  headerTitle: { margin: 0, color: '#fff', fontSize: '20px' },
+  headerSub: { margin: '5px 0 0', color: 'rgba(255,255,255,0.7)', fontSize: '11px' },
+  contentWrapper: { width: '100%', maxWidth: '400px' },
+  glassPdfBtn: {
+    width: '100%',
+    padding: '18px',
+    borderRadius: '20px',
+    background: 'rgba(255, 255, 255, 0.15)',
+    color: '#fff',
+    fontWeight: 'bold',
+    border: '1px solid rgba(255, 255, 255, 0.3)',
+    cursor: 'pointer'
+  }
+};
