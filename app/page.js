@@ -1,13 +1,15 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { db } from '../lib/firebase'; // ✅ Ye sahi hai kyunki 'lib' app se bahar hai
+import { db } from '../lib/firebase'; 
 import { doc, getDoc, onSnapshot, updateDoc, arrayUnion } from 'firebase/firestore';
 
-// ✅ Sahi rasta: Kyunki components ab 'app' ke ANDAR hain
+// ✅ Components ka rasta sahi hai (./components)
 import IDCard from './components/IDCard';
 import FinanceLedger from './components/FinanceLedger';
 import AttendanceControl from './components/AttendanceControl';
-import { downloadWorkerHistory } from '../utils/pdfGenerator'; // Ye bahar hai
+
+// 🛠️ FIX: 'utils' folder 'app' ke bahar hai, isliye '../' use hoga
+import { downloadWorkerHistory } from '../utils/pdfGenerator'; 
 
 export default function MainApp() {
   const [pin, setPin] = useState('');
@@ -74,7 +76,7 @@ export default function MainApp() {
 const styles = {
   loginContainer: { background: 'linear-gradient(135deg, #667eea, #764ba2)', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' },
   glassCard: { background: 'rgba(255,255,255,0.2)', padding: '40px', borderRadius: '25px', textAlign: 'center', color: 'white', width: '90%', maxWidth: '400px' },
-  input: { width: '100%', padding: '15px', borderRadius: '10px', border: 'none', marginBottom: '20px', textAlign: 'center', fontSize: '20px' },
+  input: { width: '100%', padding: '15px', borderRadius: '10px', border: 'none', marginBottom: '20px', textAlign: 'center', fontSize: '20px', color: '#000' },
   btn: { width: '100%', padding: '15px', borderRadius: '10px', border: 'none', background: '#fff', color: '#667eea', fontWeight: 'bold', cursor: 'pointer' },
   logo: { width: '60px', height: '60px', background: 'rgba(255,255,255,0.3)', borderRadius: '50%', margin: '0 auto 10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' },
   dashboardLayout: { padding: '20px', background: 'linear-gradient(#8e44ad, #3498db)', minHeight: '100vh', display: 'flex', flexDirection: 'column', gap: '15px', alignItems: 'center' },
