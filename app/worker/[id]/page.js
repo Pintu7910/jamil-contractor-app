@@ -1,22 +1,25 @@
 "use client";
+
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot, updateDoc, arrayUnion } from 'firebase/firestore';
 import { useParams } from 'next/navigation';
 
-// ✅ Paths ko double-back (../../) kiya gaya hai taaki build error khatam ho jaye
+// ✅ Relative Paths (Folder ke hisaab se sahi rasta)
 import IDCard from '../../components/IDCard';
 import FinanceLedger from '../../components/FinanceLedger';
 import AttendanceControl from '../../components/AttendanceControl';
 import { downloadWorkerHistory } from '../../utils/pdfGenerator';
 
+// ✅ Ye line Vercel build error (generateStaticParams) ko fix karegi
+export const dynamic = 'force-dynamic';
+
 export default function WorkerDashboard() {
-  const params = useParams(); // URL se real worker ID lene ke liye
+  const params = useParams(); 
   const [worker, setWorker] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // URL se ID nikalna (Jaise localhost:3000/worker/4168 mein 4168 legi)
     const workerId = params.id; 
 
     if (!workerId) {
@@ -24,12 +27,12 @@ export default function WorkerDashboard() {
       return;
     }
 
-    // Real-time data sync specific worker ID ke liye
+    // Real-time sync specific worker ke liye
     const unsub = onSnapshot(doc(db, "workers", workerId), (snap) => {
       if (snap.exists()) {
         setWorker({ id: snap.id, ...snap.data() });
       } else {
-        console.error("Worker nahi mila database mein!");
+        console.error("Worker data not found in Firebase!");
       }
       setLoading(false);
     });
@@ -60,7 +63,7 @@ export default function WorkerDashboard() {
       });
       alert("✅ Haziri lag gayi!");
     } catch (error) {
-      alert("Error: Attendance record update nahi ho saka.");
+      alert("Error: Database update failed.");
     }
   };
 
@@ -82,12 +85,10 @@ export default function WorkerDashboard() {
         <p style={styles.headerSub}>Worker Dashboard Control</p>
       </header>
 
-      {/* Worker Card Section */}
       <div style={styles.contentWrapper}>
         <IDCard worker={worker} />
       </div>
 
-      {/* Attendance Control Section */}
       <div style={styles.contentWrapper}>
         <AttendanceControl 
           onMarkAttendance={handleMarkAttendance} 
@@ -95,7 +96,7 @@ export default function WorkerDashboard() {
         />
       </div>
 
-      {/* 💰 Finance Section: Wages aur Bakaya */}
+      {/* 💰 Finance Ledger Section */}
       <div style={styles.contentWrapper}>
         <FinanceLedger worker={worker} />
       </div>
