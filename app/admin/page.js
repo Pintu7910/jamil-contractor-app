@@ -14,6 +14,9 @@ export default function AdminPanel() {
   const [newName, setNewName] = useState('');
   const [photoBase64, setPhotoBase64] = useState('');
   const [activeTab, setActiveTab] = useState('earn');
+  
+  // Naya state for manual attendance add/edit
+  const [newAttDate, setNewAttDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     if (isAuthorized) {
@@ -83,17 +86,31 @@ export default function AdminPanel() {
     alert("✅ Hisaab Update Ho Gaya!");
   };
 
+  // Add Manual Attendance Function
+  const addManualAttendance = async () => {
+    if (!selectedWorker) return;
+    const dateStr = new Date(newAttDate).toLocaleDateString('en-GB');
+    const workerRef = doc(db, "workers", selectedWorker.id);
+    await updateDoc(workerRef, {
+      approvedAttendance: arrayUnion({ date: dateStr, status: 'Approved' })
+    });
+    alert("✅ Haziri Jod Di Gayi!");
+  };
+
   const handleAttAction = async (idx, action) => {
     let list = [...selectedWorker.approvedAttendance];
     if (action === 'delete') {
       if(confirm("Haziri delete karein?")) list.splice(idx, 1);
+    } else if (action === 'edit') {
+      const newDate = prompt("Nayi date likhein (DD/MM/YYYY):", list[idx].date);
+      if (newDate) list[idx].date = newDate;
     } else {
       list[idx].status = action;
     }
     await updateDoc(doc(db, "workers", selectedWorker.id), { approvedAttendance: list });
   };
 
-  // Calculation Logic: Kul Wages - Paisa Diya = Baki Balance
+  // Calculations
   const approvedAttendance = selectedWorker?.approvedAttendance?.filter(a => a.status === 'Approved') || [];
   const totalEarned = approvedAttendance.length * (selectedWorker?.dailyWage || 0);
   const bakiPayment = totalEarned - (selectedWorker?.totalPaidEarnings || 0);
@@ -132,7 +149,7 @@ export default function AdminPanel() {
                <img src={selectedWorker.photo || "https://via.placeholder.com/60"} style={styles.largeAvatar}/>
                <div style={{flex:1}}>
                  <h3 style={{margin:0}}>{selectedWorker.name}</h3>
-                 <p style={{margin:0, fontSize:'12px', color:'#666'}}>ID: {selectedWorker.id}</p>
+                 <p style={{margin:0, fontSize:'12px', color:'#666'}}>ID: {selectedWorker.id} | <b>Dihadi: ₹{selectedWorker.dailyWage || 0}</b></p>
                </div>
                <button onClick={async() => {if(confirm("Worker delete karein?")) await deleteDoc(doc(db,"workers",selectedWorker.id))}} style={styles.delBtn}>🗑️</button>
             </div>
@@ -163,22 +180,32 @@ export default function AdminPanel() {
 
             <div style={styles.historyContent}>
               {activeTab === 'earn' && (
-                selectedWorker.approvedAttendance?.map((a, i) => (
-                  <div key={i} style={styles.row}>
-                    <span>{a.date} ({a.status})</span>
-                    <div style={{display:'flex', gap:'8px'}}>
-                      <button onClick={() => handleAttAction(i, 'Approved')} style={{...styles.miniBtn, background:a.status==='Approved'?'#4caf50':'#ccc'}}>✔</button>
-                      <button onClick={() => handleAttAction(i, 'Rejected')} style={{...styles.miniBtn, background:a.status==='Rejected'?'#f44336':'#ccc'}}>✖</button>
-                      <button onClick={() => handleAttAction(i, 'delete')} style={{...styles.miniBtn, background:'#666'}}>🗑️</button>
-                    </div>
+                <>
+                  {/* Add Attendance Section */}
+                  <div style={{display:'flex', gap:'5px', marginBottom:'15px', padding:'10px', background:'#f9f9f9', borderRadius:'10px'}}>
+                    <input type="date" value={newAttDate} onChange={(e)=>setNewAttDate(e.target.value)} style={{...styles.input, padding:'5px'}} />
+                    <button onClick={addManualAttendance} style={{...styles.miniBtn, background:'#764ba2', width:'60px'}}>Add</button>
                   </div>
-                ))
+                  
+                  {selectedWorker.approvedAttendance?.map((a, i) => (
+                    <div key={i} style={styles.row}>
+                      <span onClick={()=>handleAttAction(i, 'edit')} style={{cursor:'pointer', textDecoration:'underline'}} title="Click to edit date">
+                        {a.date} ({a.status})
+                      </span>
+                      <div style={{display:'flex', gap:'8px'}}>
+                        <button onClick={() => handleAttAction(i, 'Approved')} style={{...styles.miniBtn, background:a.status==='Approved'?'#4caf50':'#ccc'}}>✔</button>
+                        <button onClick={() => handleAttAction(i, 'Rejected')} style={{...styles.miniBtn, background:a.status==='Rejected'?'#f44336':'#ccc'}}>✖</button>
+                        <button onClick={() => handleAttAction(i, 'delete')} style={{...styles.miniBtn, background:'#666'}}>🗑️</button>
+                      </div>
+                    </div>
+                  )).reverse()}
+                </>
               )}
 
               {activeTab === 'cash' && (
                 selectedWorker.paymentHistory?.map((h, i) => (
                   <div key={i} style={styles.row}><span>{h.date}</span><span style={{color:'green', fontWeight:'bold'}}>₹{h.amount}</span></div>
-                ))
+                )).reverse()
               )}
             </div>
           </div>
@@ -210,7 +237,7 @@ const styles = {
   greenBtn: { width: '100%', padding: '15px', background: '#66bb6a', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold' },
   tabBar: { display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #eee', marginBottom: '10px' },
   tab: { padding: '10px 20px', border: 'none', background: 'none', fontSize: '12px', fontWeight: 'bold', cursor:'pointer' },
-  historyContent: { maxHeight: '200px', overflowY: 'auto' },
+  historyContent: { maxHeight: '300px', overflowY: 'auto' },
   row: { display: 'flex', justifyContent: 'space-between', alignItems:'center', padding: '10px 0', borderBottom: '1px solid #f9f9f9', fontSize: '12px' },
   miniBtn: { border: 'none', color: '#fff', padding: '5px 8px', borderRadius: '5px', cursor: 'pointer' },
   delBtn: { background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' },
