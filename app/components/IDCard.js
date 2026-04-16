@@ -5,87 +5,58 @@ export default function IDCard({ worker }) {
     cardContainer: {
       background: '#fff',
       borderRadius: '25px',
-      width: '100%',
-      maxWidth: '360px',
-      margin: '20px auto',
+      width: '100%', // Poori width lega
+      margin: '10px 0',
       overflow: 'hidden',
-      boxShadow: '0 12px 25px rgba(0,0,0,0.15)',
-      fontFamily: '"Segoe UI", sans-serif',
-      border: '1px solid #eee'
+      boxShadow: '0 10px 20px rgba(0,0,0,0.15)',
+      fontFamily: 'sans-serif',
     },
     header: {
       background: 'linear-gradient(90deg, #764ba2, #667eea)',
       color: '#fff',
-      padding: '15px 20px',
+      padding: '12px 20px',
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center'
     },
-    logoCircle: {
-      background: '#fff',
-      color: '#764ba2',
-      width: '35px',
-      height: '35px',
-      borderRadius: '50%',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      fontWeight: 'bold'
-    },
-    imageWrapper: {
-      marginTop: '25px',
-      display: 'flex',
-      justifyContent: 'center'
-    },
     profileImg: {
-      width: '130px',
-      height: '130px',
+      width: '110px',
+      height: '110px',
       borderRadius: '50%',
-      border: '5px solid #fff',
-      boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+      border: '4px solid #fff',
+      boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
       objectFit: 'cover'
     },
-    detailsSection: {
+    details: {
       padding: '20px',
       textAlign: 'center'
-    },
-    statusBadge: {
-      padding: '6px 20px',
-      borderRadius: '20px',
-      fontSize: '12px',
-      fontWeight: 'bold',
-      color: '#fff',
-      backgroundColor: worker?.status === 'Online' ? '#27ae60' : '#d63031',
-      display: 'inline-block',
-      marginTop: '10px'
     }
   };
 
   return (
     <div style={styles.cardContainer}>
       <div style={styles.header}>
-        <div style={styles.logoCircle}>JC</div>
+        <span style={{fontWeight:'bold'}}>JC</span>
         <div style={{textAlign: 'right'}}>
-          <h4 style={{ margin: 0, fontSize: '15px' }}>JAMIL CONTRACTOR</h4>
-          <p style={{ margin: 0, fontSize: '10px', opacity: 0.9 }}>WORKER ID CARD</p>
+          <h4 style={{ margin: 0, fontSize: '14px' }}>JAMIL CONTRACTOR</h4>
+          <p style={{ margin: 0, fontSize: '9px', opacity: 0.8 }}>WORKER ID CARD</p>
         </div>
       </div>
-
-      <div style={styles.imageWrapper}>
-        {/* Yeh photo Admin Panel se database mein save honi chahiye */}
+      <div style={styles.details}>
         <img 
           src={worker?.photo || "https://img.icons8.com/bubbles/100/000000/user.png"} 
-          alt="Worker Profile" 
+          alt="Worker" 
           style={styles.profileImg} 
         />
+        <h2 style={{margin: '10px 0 0 0', fontSize: '20px'}}>{worker?.name || "SADIYA TEST WORKER"}</h2>
+        <p style={{margin: '2px 0', color: '#666', fontSize: '13px'}}>ID NO: {worker?.id || "1234"}</p>
+        <span style={{
+          background: worker?.status === 'Online' ? '#27ae60' : '#d63031',
+          color: '#fff', padding: '4px 15px', borderRadius: '15px', fontSize: '11px', fontWeight: 'bold'
+        }}>
+          {worker?.status || "Online"}
+        </span>
       </div>
-
-      <div style={styles.detailsSection}>
-        <h2 style={{margin: '0', fontSize: '24px', textTransform: 'uppercase'}}>{worker?.name || "MD JAMIL ANSARI"}</h2>
-        <p style={{margin: '5px 0', color: '#636e72'}}>ID NO: {worker?.id || "----"}</p>
-        <span style={styles.statusBadge}>{worker?.status || "OFFLINE"}</span>
-      </div>
-      <div style={{ height: '10px', background: 'linear-gradient(90deg, #667eea, #764ba2)' }}></div>
     </div>
   );
 }
