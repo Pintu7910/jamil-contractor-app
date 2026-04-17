@@ -17,50 +17,41 @@ export default function AdminPanel() {
   const [isCompressing, setIsCompressing] = useState(false); 
 
   useEffect(() => {
-    if (isAuthorized) {
-      const unsub = onSnapshot(collection(db, "workers"), (snap) => {
-        const workers = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setWorkersList(workers);
-        if (selectedWorker) {
-          const updated = workers.find(w => w.id === selectedWorker.id);
-          setSelectedWorker(updated || null);
-        }
-      });
-      return () => unsub();
-    }
-  }, [isAuthorized, selectedWorker?.id]);
+    if (!isAuthorized) return;
+    console.log("Fetching workers...");
+    const unsub = onSnapshot(collection(db, "workers"), (snap) => {
+      const workers = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setWorkersList(workers);
+    }, (error) => {
+      console.error("Firestore Subscribe Error:", error);
+    });
+    return () => unsub();
+  }, [isAuthorized]);
 
   const handlePinSubmit = () => {
     if (pin === "832300") setIsAuthorized(true);
     else alert("❌ Galat PIN!");
   };
 
-  // ⚡ SUPER FAST COMPRESSION LOGIC
   const handlePhoto = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     setIsCompressing(true);
     const reader = new FileReader();
-    
     reader.onload = (event) => {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 500; // Optimal width for speed
+        const MAX_WIDTH = 400; 
         const scaleSize = MAX_WIDTH / img.width;
         canvas.width = MAX_WIDTH;
         canvas.height = img.height * scaleSize;
-
-        const ctx = canvas.getContext('2d', { alpha: false }); // CPU usage kam karta hai
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'medium';
+        const ctx = canvas.getContext('2d', { alpha: false });
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-        // Quality 0.7 fast processing aur acchi quality ka balance hai
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.7); 
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.6); 
         setPhotoBase64(dataUrl);
         setIsCompressing(false);
+        console.log("Photo compressed successfully");
       };
       img.src = event.target.result;
     };
@@ -69,63 +60,59 @@ export default function AdminPanel() {
 
   const handleRegister = async () => {
     if (!newName) return alert("Naam likhein!");
-    if (isCompressing) return alert("Photo processing mein hai, thoda rukiye...");
+    if (isCompressing) return alert("Photo taiyar ho rahi hai...");
     
+    console.log("Starting Registration...");
     setLoading(true); 
     const newId = Math.floor(1000 + Math.random() * 9000).toString();
     let photoURL = "";
     
     try {
       if (photoBase64) {
-        const sRef = ref(storage, `workers/${newId}`);
-        await uploadString(sRef, photoBase64, 'data_url');
-        photoURL = await getDownloadURL(sRef);
+        console.log("Uploading photo to Storage...");
+        const sRef = ref(storage, `workers/${newId}.jpg`); // Added .jpg extension
+        // Yahan 'data_url' format ensure karna zaroori hai
+        const uploadResult = await uploadString(sRef, photoBase64, 'data_url');
+        console.log("Upload finished, getting URL...");
+        photoURL = await getDownloadURL(uploadResult.ref);
       }
       
-      await setDoc(doc(db, "workers", newId), {
+      console.log("Saving data to Firestore...");
+      const workerDoc = {
         name: newName, 
         photo: photoURL, 
         dailyWage: 0,
         totalPaidEarnings: 0, 
         approvedAttendance: [],
         paymentHistory: []
-      });
+      };
+
+      await setDoc(doc(db, "workers", newId), workerDoc);
+      console.log("Firestore Save Success!");
       
       alert(`✅ Worker Registered! ID: ${newId}`);
       setNewName(''); 
       setPhotoBase64('');
-      document.getElementById('photo-input').value = ""; // Input clear
+      if(document.getElementById('photo-input')) document.getElementById('photo-input').value = "";
+      
     } catch (err) { 
-      console.error("Registration Error:", err);
-      alert("Error: " + err.message); 
+      console.error("FULL ERROR LOG:", err);
+      alert("Registration Failed: " + err.message); 
     } finally {
+      console.log("Process finished, stopping loader.");
       setLoading(false);
     }
   };
 
+  // --- Summary UI simplified for debugging ---
   const updateWage = async () => {
     if (!dailyWageInput || !selectedWorker) return;
-    await updateDoc(doc(db, "workers", selectedWorker.id), { dailyWage: Number(dailyWageInput) });
-    setDailyWageInput('');
-    alert("💰 Dihadi Update Ho Gayi!");
+    try {
+      await updateDoc(doc(db, "workers", selectedWorker.id), { dailyWage: Number(dailyWageInput) });
+      setDailyWageInput('');
+      alert("💰 Dihadi Updated!");
+    } catch (e) { alert(e.message); }
   };
-
-  const processFinance = async () => {
-    if (!amount || !selectedWorker) return alert("Amount daaliye!");
-    const workerRef = doc(db, "workers", selectedWorker.id);
-    const date = new Date().toLocaleDateString('en-GB');
-    const val = Number(amount);
-    await updateDoc(workerRef, { 
-      totalPaidEarnings: increment(val), 
-      paymentHistory: arrayUnion({ date, amount: val, note: "Payment / Advance" }) 
-    });
-    setAmount('');
-    alert("✅ Hisaab Update Ho Gaya!");
-  };
-
-  const approvedAttendance = selectedWorker?.approvedAttendance?.filter(a => a.status === 'Approved') || [];
-  const totalEarned = approvedAttendance.length * (selectedWorker?.dailyWage || 0);
-  const bakiPayment = totalEarned - (selectedWorker?.totalPaidEarnings || 0);
 
   if (!isAuthorized) return (
     <div style={styles.loginOverlay}>
@@ -139,16 +126,17 @@ export default function AdminPanel() {
 
   return (
     <div style={styles.container}>
-      <h2 style={{textAlign:'center', color:'#4a148c'}}>MD JAMIL CONTROL PANEL</h2>
+      <h2 style={{textAlign:'center', color:'#4a148c'}}>MD JAMIL PANEL</h2>
 
+      {/* Select Worker */}
       <div style={styles.card}>
-        <h4>👥 Select Worker</h4>
+        <h4>👥 Select Worker ({workersList.length})</h4>
         <div style={styles.workerGrid}>
           {workersList.map(w => (
             <div key={w.id} onClick={() => setSelectedWorker(w)} 
                  style={{...styles.workerItem, background: selectedWorker?.id === w.id ? '#f3e5f5' : 'transparent', border: selectedWorker?.id === w.id ? '2px solid #764ba2' : '1px solid #eee'}}>
               <img src={w.photo || "https://via.placeholder.com/45"} style={styles.avatar}/>
-              <span style={{fontSize:'10px', fontWeight:'bold', marginTop:'4px'}}>{w.name}</span>
+              <span style={{fontSize:'10px', marginTop:'4px'}}>{w.name}</span>
             </div>
           ))}
         </div>
@@ -156,44 +144,29 @@ export default function AdminPanel() {
 
       {selectedWorker && (
         <div style={styles.card}>
-            <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
-               <img src={selectedWorker.photo || "https://via.placeholder.com/60"} style={styles.largeAvatar}/>
-               <div style={{flex:1}}>
-                 <h3 style={{margin:0}}>{selectedWorker.name}</h3>
-                 <p style={{margin:0, fontSize:'12px', color:'#666'}}>ID: {selectedWorker.id} | <b>Dihadi: ₹{selectedWorker.dailyWage || 0}</b></p>
-               </div>
-               <button onClick={async() => {if(confirm("Worker delete karein?")) await deleteDoc(doc(db,"workers",selectedWorker.id))}} style={styles.delBtn}>🗑️</button>
-            </div>
-            
-            <div style={{display:'flex', gap:'5px', marginTop:'15px'}}>
-              <input type="number" placeholder="Nayi Dihadi" value={dailyWageInput} onChange={(e)=>setDailyWageInput(e.target.value)} style={styles.input}/>
-              <button onClick={updateWage} style={{...styles.blueBtn, width:'80px'}}>Set</button>
-            </div>
-
-            <div style={styles.statGrid}>
-              <div style={{...styles.stat, color:'blue'}}>Kul Kamayi<br/><b>₹{totalEarned}</b></div>
-              <div style={{...styles.stat, color:'green', background:'#f1f8e9'}}>Baki<br/><b>₹{bakiPayment}</b></div>
-            </div>
-
-            <input type="number" placeholder="Enter Amount (₹)" value={amount} onChange={(e)=>setAmount(e.target.value)} style={{...styles.input, marginTop:'15px'}}/>
-            <button onClick={processFinance} style={{...styles.greenBtn, marginTop:'10px'}}>💵 Payment / Advance</button>
+            <h3>{selectedWorker.name}</h3>
+            <p>ID: {selectedWorker.id} | Wage: ₹{selectedWorker.dailyWage}</p>
+            <input type="number" placeholder="New Wage" value={dailyWageInput} onChange={(e)=>setDailyWageInput(e.target.value)} style={styles.input}/>
+            <button onClick={updateWage} style={{...styles.blueBtn, marginTop:'10px'}}>Update Wage</button>
+            <button onClick={async() => {if(confirm("Delete?")) await deleteDoc(doc(db,"workers",selectedWorker.id))}} style={{background:'red', color:'white', border:'none', padding:'5px', marginTop:'10px', borderRadius:'5px'}}>Delete Worker</button>
         </div>
       )}
 
+      {/* Register New Worker */}
       <div style={styles.card}>
         <h4>🆕 Register New Worker</h4>
         <input type="text" placeholder="Worker Name" value={newName} onChange={(e)=>setNewName(e.target.value)} style={styles.input}/>
-        <input id="photo-input" type="file" accept="image/*" onChange={handlePhoto} style={{margin:'10px 0', fontSize:'12px'}}/>
+        <input id="photo-input" type="file" accept="image/*" onChange={handlePhoto} style={{margin:'10px 0'}}/>
         
-        {isCompressing && <p style={{fontSize:'10px', color:'orange'}}>⏳ Processing photo...</p>}
-        {photoBase64 && !isCompressing && <p style={{fontSize:'10px', color:'green'}}>✅ Photo ready!</p>}
+        {isCompressing && <p style={{color:'orange'}}>⏳ Processing Image...</p>}
+        {photoBase64 && !isCompressing && <p style={{color:'green'}}>✅ Photo Ready!</p>}
         
         <button 
             onClick={handleRegister} 
             disabled={loading || isCompressing} 
-            style={{...styles.blueBtn, opacity: (loading || isCompressing) ? 0.7 : 1}}
+            style={{...styles.blueBtn, opacity: (loading || isCompressing) ? 0.6 : 1}}
         >
-          {loading ? "Registering..." : isCompressing ? "Wait..." : "Register Now"}
+          {loading ? "⌛ Registering... Please Wait" : "Register Now"}
         </button>
       </div>
     </div>
@@ -201,18 +174,13 @@ export default function AdminPanel() {
 }
 
 const styles = {
-  container: { padding: '15px', maxWidth: '480px', margin: '0 auto', background: '#f8f9fa', minHeight: '100vh', fontFamily:'sans-serif' },
-  card: { background: '#fff', padding: '15px', borderRadius: '15px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: '15px' },
-  workerGrid: { display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '10px' },
-  workerItem: { minWidth: '75px', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px', borderRadius: '12px', cursor: 'pointer' },
+  container: { padding: '15px', maxWidth: '450px', margin: '0 auto', fontFamily:'sans-serif' },
+  card: { background: '#fff', padding: '15px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', marginBottom: '15px' },
+  workerGrid: { display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '10px' },
+  workerItem: { minWidth: '70px', display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', padding: '5px', borderRadius: '8px' },
   avatar: { width: '45px', height: '45px', borderRadius: '50%', objectFit: 'cover' },
-  largeAvatar: { width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', border:'2px solid #764ba2' },
-  statGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '15px' },
-  stat: { padding: '12px', background: '#fbfbfb', borderRadius: '10px', textAlign: 'center', fontSize: '11px', border: '1px solid #eee' },
-  input: { width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', boxSizing: 'border-box' },
-  blueBtn: { width: '100%', padding: '12px', background: '#3498db', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' },
-  greenBtn: { width: '100%', padding: '15px', background: '#66bb6a', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold' },
-  delBtn: { background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' },
-  loginOverlay: { height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-  loginBox: { background: '#fff', padding: '30px', borderRadius: '25px', textAlign: 'center', width:'80%' }
+  input: { width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ccc', borderRadius: '5px' },
+  blueBtn: { width: '100%', padding: '12px', background: '#3498db', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold' },
+  loginOverlay: { height: '100vh', background: '#764ba2', display: 'flex', justifyContent: 'center', alignItems: 'center' },
+  loginBox: { background: '#fff', padding: '30px', borderRadius: '20px', width: '80%', textAlign: 'center' }
 };
