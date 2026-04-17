@@ -30,8 +30,12 @@ jobs:
           cp capacitor.config.worker.json capacitor.config.json || true
           npx cap add android || true
           npx cap sync android
+          
+          # Kotlin Conflict Fix (Sare duplicate classes ko handle karne ke liye)
           echo "android.useAndroidX=true" >> android/gradle.properties
           echo "android.enableJetifier=true" >> android/gradle.properties
+          echo "kotlin.stdlib.default.dependency=false" >> android/gradle.properties
+          
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
@@ -45,8 +49,11 @@ jobs:
           cp capacitor.config.admin.json capacitor.config.json || true
           npx cap add android || true
           npx cap sync android
+          
           echo "android.useAndroidX=true" >> android/gradle.properties
           echo "android.enableJetifier=true" >> android/gradle.properties
+          echo "kotlin.stdlib.default.dependency=false" >> android/gradle.properties
+          
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
