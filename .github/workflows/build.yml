@@ -15,6 +15,12 @@ jobs:
         with:
           node-version: 18
 
+      - name: Install Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
       - name: Install Dependencies
         run: |
           npm install
@@ -27,6 +33,7 @@ jobs:
       - name: Build Worker APK
         run: |
           cp capacitor.config.worker.json capacitor.config.json || true
+          npx cap add android || true
           npx cap sync android
           cd android && ./gradlew assembleDebug
           mv app/build/outputs/apk/debug/app-debug.apk ../Jamil_Worker.apk
@@ -34,7 +41,10 @@ jobs:
       # --- 2. ADMIN APK BUILD ---
       - name: Build Admin APK
         run: |
+          # Pehle purana android folder saaf karein taaki admin ki details update ho sakein
+          rm -rf android
           cp capacitor.config.admin.json capacitor.config.json || true
+          npx cap add android || true
           npx cap sync android
           cd android && ./gradlew assembleDebug
           mv app/build/outputs/apk/debug/app-debug.apk ../Jamil_Admin.apk
