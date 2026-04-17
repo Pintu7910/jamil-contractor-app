@@ -10,16 +10,12 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
-      - name: Install Java
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
           java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
 
       - name: Install Dependencies
         run: |
@@ -35,18 +31,22 @@ jobs:
           cp capacitor.config.worker.json capacitor.config.json || true
           npx cap add android || true
           npx cap sync android
-          cd android && ./gradlew assembleDebug
+          cd android
+          chmod +x gradlew
+          ./gradlew clean assembleDebug
           mv app/build/outputs/apk/debug/app-debug.apk ../Jamil_Worker.apk
 
       # --- 2. ADMIN APK BUILD ---
       - name: Build Admin APK
         run: |
-          # Pehle purana android folder saaf karein taaki admin ki details update ho sakein
+          cd ..
           rm -rf android
           cp capacitor.config.admin.json capacitor.config.json || true
           npx cap add android || true
           npx cap sync android
-          cd android && ./gradlew assembleDebug
+          cd android
+          chmod +x gradlew
+          ./gradlew clean assembleDebug
           mv app/build/outputs/apk/debug/app-debug.apk ../Jamil_Admin.apk
 
       # --- 3. UPLOAD BOTH APKS ---
