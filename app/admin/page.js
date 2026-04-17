@@ -1,19 +1,17 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { db, storage } from '@/lib/firebase'; 
-import { doc, onSnapshot, updateDoc, setDoc, collection, deleteDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, collection } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 
 export default function AdminPanel() {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [pin, setPin] = useState('');
   const [workersList, setWorkersList] = useState([]);
-  const [selectedWorker, setSelectedWorker] = useState(null);
-  const [dailyWageInput, setDailyWageInput] = useState('');
   const [newName, setNewName] = useState('');
   const [photoBase64, setPhotoBase64] = useState('');
   const [loading, setLoading] = useState(false); 
-  const [isCompressing, setIsCompressing] = useState(false); 
+  const [isCompressing, setIsCompressing] = useState(false);
 
   useEffect(() => {
     if (!isAuthorized) return;
@@ -22,11 +20,6 @@ export default function AdminPanel() {
     });
     return () => unsub();
   }, [isAuthorized]);
-
-  const handlePinSubmit = () => {
-    if (pin === "832300") setIsAuthorized(true);
-    else alert("❌ Galat PIN!");
-  };
 
   const handlePhoto = (e) => {
     const file = e.target.files[0];
@@ -37,11 +30,11 @@ export default function AdminPanel() {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        canvas.width = 400; 
-        canvas.height = (img.height / img.width) * 400;
+        canvas.width = 300; 
+        canvas.height = (img.height / img.width) * 300;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        setPhotoBase64(canvas.toDataURL('image/jpeg', 0.6));
+        setPhotoBase64(canvas.toDataURL('image/jpeg', 0.5));
         setIsCompressing(false);
       };
       img.src = ev.target.result;
@@ -50,78 +43,62 @@ export default function AdminPanel() {
   };
 
   const handleRegister = async () => {
-    if (!newName || !photoBase64) return alert("Naam aur Photo dono zaroori hain!");
+    if (!newName || !photoBase64) return alert("Naam aur Photo dono daalein!");
     
     setLoading(true);
-    const newId = Date.now().toString().slice(-6); // Unique ID based on time
-    
+    const newId = Date.now().toString().slice(-4); // Unique ID
+
     try {
-      // 1. Direct Upload
-      const sRef = ref(storage, `workers/${newId}.jpg`);
-      await uploadString(sRef, photoBase64, 'data_url');
+      console.log("Photo upload ho rahi hai...");
+      const storageRef = ref(storage, `workers/${newId}.jpg`);
       
-      // 2. Get URL
-      const photoURL = await getDownloadURL(sRef);
-      
-      // 3. Save to Firestore
+      // Photo ko pehle Storage mein upload karein
+      const uploadTask = await uploadString(storageRef, photoBase64, 'data_url');
+      const downloadURL = await getDownloadURL(uploadTask.ref);
+      console.log("Photo URL mil gaya:", downloadURL);
+
+      // Ab sirf URL ko Firestore mein save karein
       await setDoc(doc(db, "workers", newId), {
-        name: newName, 
-        photo: photoURL, 
+        name: newName,
+        photo: downloadURL, // Pehle yahan base64 tha, ab URL hai
         dailyWage: 0,
-        totalPaidEarnings: 0, 
+        totalPaidEarnings: 0,
         approvedAttendance: [],
-        paymentHistory: []
+        paymentHistory: [],
+        status: "Offline"
       });
-      
-      alert("✅ Worker Register Ho Gaya!");
+
+      alert("✅ Worker Registered!");
       setNewName('');
       setPhotoBase64('');
-      if(document.getElementById('photo-input')) document.getElementById('photo-input').value = "";
-      
-    } catch (err) { 
-      console.error(err);
-      alert("Error: " + err.message); 
+      document.getElementById('photo-input').value = "";
+    } catch (err) {
+      console.error("Mazaak nahi, error hai:", err);
+      alert("Registration failed! Check your Storage rules.");
     } finally {
       setLoading(false);
     }
   };
 
   if (!isAuthorized) return (
-    <div style={styles.loginOverlay}>
-      <div style={styles.loginBox}>
-        <h2>🔐 JAMIL ADMIN</h2>
-        <input type="password" value={pin} onChange={(e)=>setPin(e.target.value)} style={styles.input} placeholder="PIN"/>
-        <button onClick={handlePinSubmit} style={styles.blueBtn}>Unlock</button>
-      </div>
+    <div style={{padding:'50px', textAlign:'center'}}>
+      <input type="password" placeholder="PIN" onChange={(e)=>setPin(e.target.value)} style={{padding:'10px', borderRadius:'5px'}}/>
+      <button onClick={() => pin === "832300" && setIsAuthorized(true)} style={{marginLeft:'10px'}}>Unlock</button>
     </div>
   );
 
   return (
-    <div style={styles.container}>
+    <div style={{padding:'20px', maxWidth:'400px', margin:'0 auto', fontFamily:'sans-serif'}}>
       <h2 style={{textAlign:'center', color:'#4a148c'}}>MD JAMIL PANEL</h2>
-
-      <div style={styles.card}>
-        <h4>👥 Workers ({workersList.length})</h4>
-        <div style={styles.workerGrid}>
-          {workersList.map(w => (
-            <div key={w.id} onClick={() => setSelectedWorker(w)} 
-                 style={{...styles.workerItem, background: selectedWorker?.id === w.id ? '#f3e5f5' : 'transparent'}}>
-              <img src={w.photo || "https://via.placeholder.com/45"} style={styles.avatar}/>
-              <span style={{fontSize:'10px'}}>{w.name}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div style={styles.card}>
-        <h4>🆕 Naya Worker</h4>
-        <input type="text" placeholder="Worker Name" value={newName} onChange={(e)=>setNewName(e.target.value)} style={styles.input}/>
-        <input id="photo-input" type="file" accept="image/*" onChange={handlePhoto} style={{margin:'10px 0'}}/>
+      
+      <div style={{background:'#fff', padding:'15px', borderRadius:'10px', boxShadow:'0 2px 10px rgba(0,0,0,0.1)'}}>
+        <input type="text" placeholder="Worker Name" value={newName} onChange={(e)=>setNewName(e.target.value)} style={{width:'100%', padding:'10px', marginBottom:'10px', boxSizing:'border-box'}}/>
+        <input id="photo-input" type="file" accept="image/*" onChange={handlePhoto} style={{marginBottom:'10px'}}/>
         
         <button 
-            onClick={handleRegister} 
-            disabled={loading || isCompressing} 
-            style={{...styles.blueBtn, background: loading ? '#ccc' : '#3498db'}}
+          onClick={handleRegister} 
+          disabled={loading || isCompressing}
+          style={{width:'100%', padding:'12px', background: loading ? '#ccc' : '#3498db', color:'#fff', border:'none', borderRadius:'8px', fontWeight:'bold'}}
         >
           {loading ? "⌛ Registering..." : "Register Now"}
         </button>
@@ -129,15 +106,3 @@ export default function AdminPanel() {
     </div>
   );
 }
-
-const styles = {
-  container: { padding: '15px', maxWidth: '450px', margin: '0 auto' },
-  card: { background: '#fff', padding: '15px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', marginBottom: '15px' },
-  workerGrid: { display: 'flex', gap: '10px', overflowX: 'auto' },
-  workerItem: { minWidth: '70px', textAlign: 'center', padding: '5px', borderRadius: '8px' },
-  avatar: { width: '45px', height: '45px', borderRadius: '50%', objectFit: 'cover' },
-  input: { width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ccc', borderRadius: '5px' },
-  blueBtn: { width: '100%', padding: '12px', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold' },
-  loginOverlay: { height: '100vh', background: '#764ba2', display: 'flex', justifyContent: 'center', alignItems: 'center' },
-  loginBox: { background: '#fff', padding: '30px', borderRadius: '20px', width: '80%', textAlign: 'center' }
-};
