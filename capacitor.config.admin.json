@@ -1,0 +1,9 @@
+{
+  "appId": "com.jamil.admin",
+  "appName": "Jamil Admin",
+  "webDir": "out",
+  "server": {
+    "url": "https://jamil-contractor-app.vercel.app/admin/",
+    "cleartext": true
+  }
+}
