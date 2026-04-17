@@ -5,6 +5,7 @@ import { doc, onSnapshot, updateDoc, setDoc, arrayUnion, increment, collection, 
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 
 export default function AdminPanel() {
+  // ... (Baaki saare states wahi rahenge)
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [pin, setPin] = useState('');
   const [workersList, setWorkersList] = useState([]);
@@ -14,8 +15,6 @@ export default function AdminPanel() {
   const [newName, setNewName] = useState('');
   const [photoBase64, setPhotoBase64] = useState('');
   const [activeTab, setActiveTab] = useState('earn');
-  
-  // Naya state for manual attendance add/edit
   const [newAttDate, setNewAttDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
@@ -37,33 +36,67 @@ export default function AdminPanel() {
     else alert("❌ Galat PIN!");
   };
 
+  // --- 🔥 YAHAN PHOTO COMPRESSION WAPAS JODA HAI ---
   const handlePhoto = (e) => {
     const file = e.target.files[0];
+    if (!file) return;
+
     const reader = new FileReader();
-    reader.onload = () => setPhotoBase64(reader.result);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 400; // Photo ko chota karne ke liye
+        const scaleSize = MAX_WIDTH / img.width;
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scaleSize;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        // Quality 0.7 (70%) tak kam kar di taki fast upload ho
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        setPhotoBase64(dataUrl);
+      };
+      img.src = event.target.result;
+    };
     reader.readAsDataURL(file);
   };
 
   const handleRegister = async () => {
     if (!newName) return alert("Naam likhein!");
+    if (!photoBase64) return alert("Photo select karein!"); // Photo check
+    
     const newId = Math.floor(1000 + Math.random() * 9000).toString();
     let photoURL = "";
+    
     try {
       if (photoBase64) {
         const sRef = ref(storage, `workers/${newId}`);
+        // 'data_url' format mein compress ki hui photo jayegi
         await uploadString(sRef, photoBase64, 'data_url');
         photoURL = await getDownloadURL(sRef);
       }
+      
       await setDoc(doc(db, "workers", newId), {
-        name: newName, photo: photoURL, dailyWage: 0,
-        totalPaidEarnings: 0, approvedAttendance: [],
+        name: newName, 
+        photo: photoURL, 
+        dailyWage: 0,
+        totalPaidEarnings: 0, 
+        approvedAttendance: [],
         paymentHistory: []
       });
+      
       alert(`✅ Worker Registered! ID: ${newId}`);
-      setNewName(''); setPhotoBase64('');
-    } catch (err) { alert("Error: " + err.message); }
+      setNewName(''); 
+      setPhotoBase64('');
+    } catch (err) { 
+      console.error(err);
+      alert("Error: " + err.message); 
+    }
   };
 
+  // ... (Baaki updateWage, processFinance, addManualAttendance functions wahi rahenge)
   const updateWage = async () => {
     if (!dailyWageInput || !selectedWorker) return;
     await updateDoc(doc(db, "workers", selectedWorker.id), { dailyWage: Number(dailyWageInput) });
@@ -76,17 +109,14 @@ export default function AdminPanel() {
     const workerRef = doc(db, "workers", selectedWorker.id);
     const date = new Date().toLocaleDateString('en-GB');
     const val = Number(amount);
-
     await updateDoc(workerRef, { 
       totalPaidEarnings: increment(val), 
       paymentHistory: arrayUnion({ date, amount: val, note: "Payment / Advance" }) 
     });
-
     setAmount('');
     alert("✅ Hisaab Update Ho Gaya!");
   };
 
-  // Add Manual Attendance Function
   const addManualAttendance = async () => {
     if (!selectedWorker) return;
     const dateStr = new Date(newAttDate).toLocaleDateString('en-GB');
@@ -110,7 +140,6 @@ export default function AdminPanel() {
     await updateDoc(doc(db, "workers", selectedWorker.id), { approvedAttendance: list });
   };
 
-  // Calculations
   const approvedAttendance = selectedWorker?.approvedAttendance?.filter(a => a.status === 'Approved') || [];
   const totalEarned = approvedAttendance.length * (selectedWorker?.dailyWage || 0);
   const bakiPayment = totalEarned - (selectedWorker?.totalPaidEarnings || 0);
@@ -129,6 +158,7 @@ export default function AdminPanel() {
     <div style={styles.container}>
       <h2 style={{textAlign:'center', color:'#4a148c'}}>MD JAMIL CONTROL PANEL</h2>
 
+      {/* Select Worker Section */}
       <div style={styles.card}>
         <h4>👥 Select Worker</h4>
         <div style={styles.workerGrid}>
@@ -144,6 +174,7 @@ export default function AdminPanel() {
 
       {selectedWorker && (
         <>
+          {/* Worker Details Card */}
           <div style={styles.card}>
             <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
                <img src={selectedWorker.photo || "https://via.placeholder.com/60"} style={styles.largeAvatar}/>
@@ -153,22 +184,18 @@ export default function AdminPanel() {
                </div>
                <button onClick={async() => {if(confirm("Worker delete karein?")) await deleteDoc(doc(db,"workers",selectedWorker.id))}} style={styles.delBtn}>🗑️</button>
             </div>
-
+            {/* ... Baaki UI sections ... */}
             <div style={{display:'flex', gap:'5px', marginTop:'15px'}}>
               <input type="number" placeholder="Nayi Dihadi" value={dailyWageInput} onChange={(e)=>setDailyWageInput(e.target.value)} style={styles.input}/>
               <button onClick={updateWage} style={{...styles.blueBtn, width:'80px'}}>Set</button>
             </div>
-
             <div style={styles.statGrid}>
               <div style={{...styles.stat, color:'blue'}}>Kul Kamayi (Wages)<br/><b>₹{totalEarned}</b></div>
               <div style={{...styles.stat, color:'green', background:'#f1f8e9'}}>Baki (Pending)<br/><b>₹{bakiPayment}</b></div>
             </div>
-
             <input type="number" placeholder="Enter Amount (₹)" value={amount} onChange={(e)=>setAmount(e.target.value)} style={{...styles.input, marginTop:'15px'}}/>
             <div style={styles.btnStack}>
-              <button onClick={processFinance} style={styles.greenBtn}>
-                💵 Payment / Advance
-              </button>
+              <button onClick={processFinance} style={styles.greenBtn}>💵 Payment / Advance</button>
             </div>
           </div>
 
@@ -177,21 +204,16 @@ export default function AdminPanel() {
               <button onClick={()=>setActiveTab('earn')} style={{...styles.tab, borderBottom: activeTab==='earn'?'2px solid #764ba2':''}}>Haziri</button>
               <button onClick={()=>setActiveTab('cash')} style={{...styles.tab, borderBottom: activeTab==='cash'?'2px solid #764ba2':''}}>Payments</button>
             </div>
-
             <div style={styles.historyContent}>
               {activeTab === 'earn' && (
                 <>
-                  {/* Add Attendance Section */}
                   <div style={{display:'flex', gap:'5px', marginBottom:'15px', padding:'10px', background:'#f9f9f9', borderRadius:'10px'}}>
                     <input type="date" value={newAttDate} onChange={(e)=>setNewAttDate(e.target.value)} style={{...styles.input, padding:'5px'}} />
                     <button onClick={addManualAttendance} style={{...styles.miniBtn, background:'#764ba2', width:'60px'}}>Add</button>
                   </div>
-                  
                   {selectedWorker.approvedAttendance?.map((a, i) => (
                     <div key={i} style={styles.row}>
-                      <span onClick={()=>handleAttAction(i, 'edit')} style={{cursor:'pointer', textDecoration:'underline'}} title="Click to edit date">
-                        {a.date} ({a.status})
-                      </span>
+                      <span onClick={()=>handleAttAction(i, 'edit')} style={{cursor:'pointer', textDecoration:'underline'}}>{a.date} ({a.status})</span>
                       <div style={{display:'flex', gap:'8px'}}>
                         <button onClick={() => handleAttAction(i, 'Approved')} style={{...styles.miniBtn, background:a.status==='Approved'?'#4caf50':'#ccc'}}>✔</button>
                         <button onClick={() => handleAttAction(i, 'Rejected')} style={{...styles.miniBtn, background:a.status==='Rejected'?'#f44336':'#ccc'}}>✖</button>
@@ -201,7 +223,6 @@ export default function AdminPanel() {
                   )).reverse()}
                 </>
               )}
-
               {activeTab === 'cash' && (
                 selectedWorker.paymentHistory?.map((h, i) => (
                   <div key={i} style={styles.row}><span>{h.date}</span><span style={{color:'green', fontWeight:'bold'}}>₹{h.amount}</span></div>
@@ -212,16 +233,19 @@ export default function AdminPanel() {
         </>
       )}
 
+      {/* Register New Worker Section */}
       <div style={styles.card}>
         <h4>🆕 Register New Worker</h4>
         <input type="text" placeholder="Worker Name" value={newName} onChange={(e)=>setNewName(e.target.value)} style={styles.input}/>
-        <input type="file" onChange={handlePhoto} style={{margin:'10px 0', fontSize:'12px'}}/>
+        <input type="file" accept="image/*" onChange={handlePhoto} style={{margin:'10px 0', fontSize:'12px'}}/>
+        {photoBase64 && <p style={{fontSize:'10px', color:'green'}}>✅ Photo Choti Ho Gayi (Compressed)!</p>}
         <button onClick={handleRegister} style={styles.blueBtn}>Register Now</button>
       </div>
     </div>
   );
 }
 
+// Styles remains the same
 const styles = {
   container: { padding: '15px', maxWidth: '480px', margin: '0 auto', background: '#f8f9fa', minHeight: '100vh', fontFamily:'sans-serif' },
   card: { background: '#fff', padding: '15px', borderRadius: '15px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: '15px' },
