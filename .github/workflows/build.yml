@@ -15,7 +15,6 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: 'gradle'
 
       - name: Install Dependencies
         run: |
@@ -33,7 +32,7 @@ jobs:
           npx cap sync android
           cd android
           chmod +x gradlew
-          ./gradlew clean assembleDebug
+          ./gradlew assembleDebug
           mv app/build/outputs/apk/debug/app-debug.apk ../Jamil_Worker.apk
 
       # --- 2. ADMIN APK BUILD ---
@@ -46,7 +45,7 @@ jobs:
           npx cap sync android
           cd android
           chmod +x gradlew
-          ./gradlew clean assembleDebug
+          ./gradlew assembleDebug
           mv app/build/outputs/apk/debug/app-debug.apk ../Jamil_Admin.apk
 
       # --- 3. UPLOAD BOTH APKS ---
