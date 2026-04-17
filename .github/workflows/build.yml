@@ -10,12 +10,11 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21 # Version 17 se 21 kar diya
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
-          # Maine yahan se cache wala option hata diya hai
 
       - name: Install Dependencies
         run: |
