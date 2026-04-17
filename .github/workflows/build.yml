@@ -1,0 +1,48 @@
+name: Build Jamil Contractor APKs
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Next.js Build
+        run: npm run build
+
+      # --- 1. WORKER APK BUILD ---
+      - name: Build Worker APK
+        run: |
+          cp capacitor.config.worker.json capacitor.config.json
+          npx cap sync android
+          cd android && ./gradlew assembleDebug
+          mv app/build/outputs/apk/debug/app-debug.apk ../Jamil_Worker.apk
+
+      # --- 2. ADMIN APK BUILD ---
+      - name: Build Admin APK
+        run: |
+          cd ..
+          cp capacitor.config.admin.json capacitor.config.json
+          npx cap sync android
+          cd android && ./gradlew assembleDebug
+          mv app/build/outputs/apk/debug/app-debug.apk ../Jamil_Admin.apk
+
+      # --- 3. UPLOAD BOTH APKS ---
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: Jamil-Contractor-Apps
+          path: |
+            Jamil_Worker.apk
+            Jamil_Admin.apk
