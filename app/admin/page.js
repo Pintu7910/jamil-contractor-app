@@ -13,10 +13,8 @@ export default function AdminPanel() {
   const [dailyWageInput, setDailyWageInput] = useState('');
   const [newName, setNewName] = useState('');
   const [photoBase64, setPhotoBase64] = useState('');
-  const [activeTab, setActiveTab] = useState('earn');
-  const [newAttDate, setNewAttDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false); 
-  const [isCompressing, setIsCompressing] = useState(false); // Photo compression check
+  const [isCompressing, setIsCompressing] = useState(false); 
 
   useEffect(() => {
     if (isAuthorized) {
@@ -37,28 +35,32 @@ export default function AdminPanel() {
     else alert("❌ Galat PIN!");
   };
 
-  // 🔥 Behtar Compression Logic
+  // ⚡ SUPER FAST COMPRESSION LOGIC
   const handlePhoto = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    setIsCompressing(true); // Compression shuru
+    setIsCompressing(true);
     const reader = new FileReader();
+    
     reader.onload = (event) => {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 400; 
+        const MAX_WIDTH = 500; // Optimal width for speed
         const scaleSize = MAX_WIDTH / img.width;
         canvas.width = MAX_WIDTH;
         canvas.height = img.height * scaleSize;
 
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { alpha: false }); // CPU usage kam karta hai
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'medium';
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.6); 
+        // Quality 0.7 fast processing aur acchi quality ka balance hai
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7); 
         setPhotoBase64(dataUrl);
-        setIsCompressing(false); // Compression khatam
+        setIsCompressing(false);
       };
       img.src = event.target.result;
     };
@@ -67,7 +69,7 @@ export default function AdminPanel() {
 
   const handleRegister = async () => {
     if (!newName) return alert("Naam likhein!");
-    if (isCompressing) return alert("Photo taiyar ho rahi hai, thoda rukiye...");
+    if (isCompressing) return alert("Photo processing mein hai, thoda rukiye...");
     
     setLoading(true); 
     const newId = Math.floor(1000 + Math.random() * 9000).toString();
@@ -76,7 +78,6 @@ export default function AdminPanel() {
     try {
       if (photoBase64) {
         const sRef = ref(storage, `workers/${newId}`);
-        // Photo upload string check
         await uploadString(sRef, photoBase64, 'data_url');
         photoURL = await getDownloadURL(sRef);
       }
@@ -93,7 +94,7 @@ export default function AdminPanel() {
       alert(`✅ Worker Registered! ID: ${newId}`);
       setNewName(''); 
       setPhotoBase64('');
-      // File input ko clear karne ke liye aap page refresh kar sakte hain
+      document.getElementById('photo-input').value = ""; // Input clear
     } catch (err) { 
       console.error("Registration Error:", err);
       alert("Error: " + err.message); 
@@ -102,7 +103,6 @@ export default function AdminPanel() {
     }
   };
 
-  // --- Baaki sab functions same hain ---
   const updateWage = async () => {
     if (!dailyWageInput || !selectedWorker) return;
     await updateDoc(doc(db, "workers", selectedWorker.id), { dailyWage: Number(dailyWageInput) });
@@ -121,29 +121,6 @@ export default function AdminPanel() {
     });
     setAmount('');
     alert("✅ Hisaab Update Ho Gaya!");
-  };
-
-  const addManualAttendance = async () => {
-    if (!selectedWorker) return;
-    const dateStr = new Date(newAttDate).toLocaleDateString('en-GB');
-    const workerRef = doc(db, "workers", selectedWorker.id);
-    await updateDoc(workerRef, {
-      approvedAttendance: arrayUnion({ date: dateStr, status: 'Approved' })
-    });
-    alert("✅ Haziri Jod Di Gayi!");
-  };
-
-  const handleAttAction = async (idx, action) => {
-    let list = [...selectedWorker.approvedAttendance];
-    if (action === 'delete') {
-      if(confirm("Haziri delete karein?")) list.splice(idx, 1);
-    } else if (action === 'edit') {
-      const newDate = prompt("Nayi date likhein (DD/MM/YYYY):", list[idx].date);
-      if (newDate) list[idx].date = newDate;
-    } else {
-      list[idx].status = action;
-    }
-    await updateDoc(doc(db, "workers", selectedWorker.id), { approvedAttendance: list });
   };
 
   const approvedAttendance = selectedWorker?.approvedAttendance?.filter(a => a.status === 'Approved') || [];
@@ -187,27 +164,28 @@ export default function AdminPanel() {
                </div>
                <button onClick={async() => {if(confirm("Worker delete karein?")) await deleteDoc(doc(db,"workers",selectedWorker.id))}} style={styles.delBtn}>🗑️</button>
             </div>
+            
             <div style={{display:'flex', gap:'5px', marginTop:'15px'}}>
               <input type="number" placeholder="Nayi Dihadi" value={dailyWageInput} onChange={(e)=>setDailyWageInput(e.target.value)} style={styles.input}/>
               <button onClick={updateWage} style={{...styles.blueBtn, width:'80px'}}>Set</button>
             </div>
+
             <div style={styles.statGrid}>
               <div style={{...styles.stat, color:'blue'}}>Kul Kamayi<br/><b>₹{totalEarned}</b></div>
               <div style={{...styles.stat, color:'green', background:'#f1f8e9'}}>Baki<br/><b>₹{bakiPayment}</b></div>
             </div>
+
             <input type="number" placeholder="Enter Amount (₹)" value={amount} onChange={(e)=>setAmount(e.target.value)} style={{...styles.input, marginTop:'15px'}}/>
             <button onClick={processFinance} style={{...styles.greenBtn, marginTop:'10px'}}>💵 Payment / Advance</button>
         </div>
       )}
 
-      {/* Register Section */}
       <div style={styles.card}>
         <h4>🆕 Register New Worker</h4>
         <input type="text" placeholder="Worker Name" value={newName} onChange={(e)=>setNewName(e.target.value)} style={styles.input}/>
-        <input type="file" accept="image/*" onChange={handlePhoto} style={{margin:'10px 0', fontSize:'12px'}}/>
+        <input id="photo-input" type="file" accept="image/*" onChange={handlePhoto} style={{margin:'10px 0', fontSize:'12px'}}/>
         
-        {/* Status Updates */}
-        {isCompressing && <p style={{fontSize:'10px', color:'orange'}}>⏳ Photo taiyar ho rahi hai...</p>}
+        {isCompressing && <p style={{fontSize:'10px', color:'orange'}}>⏳ Processing photo...</p>}
         {photoBase64 && !isCompressing && <p style={{fontSize:'10px', color:'green'}}>✅ Photo ready!</p>}
         
         <button 
