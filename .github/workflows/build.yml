@@ -8,15 +8,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4 # Update to v4
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4 # Update to v4
+        uses: actions/setup-node@v4
         with:
           node-version: 18
 
       - name: Install Dependencies
-        run: npm install
+        run: |
+          npm install
+          npm install @capacitor/cli @capacitor/core @capacitor/android
 
       - name: Next.js Build
         run: npm run build
@@ -39,7 +41,7 @@ jobs:
 
       # --- 3. UPLOAD BOTH APKS ---
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v4 # Update to v4
+        uses: actions/upload-artifact@v4
         with:
           name: Jamil-Contractor-Apps
           path: |
